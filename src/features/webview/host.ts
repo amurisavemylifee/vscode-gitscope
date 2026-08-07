@@ -26,12 +26,7 @@ function createNonce(): string {
  * `'unsafe-inline'` оставлен только для стилей — без него не работают
  * инлайновые `style`-атрибуты виртуализатора.
  */
-export function buildWebviewHtml(
-  webview: vscode.Webview,
-  extensionUri: vscode.Uri,
-  title: string,
-  entry: 'main' | 'graph' = 'main',
-): string {
+export function buildWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri, title: string): string {
   const nonce = createNonce();
   const assetUri = (...segments: string[]) =>
     webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'webview', ...segments));
@@ -54,12 +49,12 @@ export function buildWebviewHtml(
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="${assetUri(`${entry}.css`).toString()}" />
+    <link rel="stylesheet" href="${assetUri('main.css').toString()}" />
     <title>${title}</title>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" nonce="${nonce}" src="${assetUri(`${entry}.js`).toString()}"></script>
+    <script type="module" nonce="${nonce}" src="${assetUri('main.js').toString()}"></script>
   </body>
 </html>`;
 }

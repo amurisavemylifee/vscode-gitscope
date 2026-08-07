@@ -43,23 +43,10 @@ export class TestRepo {
     unlinkSync(join(this.root, path));
   }
 
-  /**
-   * Коммитит всё содержимое рабочего дерева и возвращает SHA.
-   *
-   * `date`, если передан, идёт и автору, и коммиттеру — нужно тестам сортировки
-   * веток по committerdate, где реальное системное время слишком грубое.
-   */
-  commit(message: string, date?: string): string {
+  /** Коммитит всё содержимое рабочего дерева и возвращает SHA. */
+  commit(message: string): string {
     this.git('add', '--all');
-    if (date === undefined) {
-      this.git('commit', '--quiet', '--allow-empty', '--message', message);
-    } else {
-      execFileSync('git', ['commit', '--quiet', '--allow-empty', '--message', message], {
-        cwd: this.root,
-        encoding: 'utf8',
-        env: { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date },
-      });
-    }
+    this.git('commit', '--quiet', '--allow-empty', '--message', message);
     return this.git('rev-parse', 'HEAD');
   }
 
@@ -80,21 +67,6 @@ export class TestRepo {
       this.git('tag', name);
     } else {
       this.git('tag', '--annotate', name, '--message', message);
-    }
-  }
-
-  /** Мерджит ветку в текущую без fast-forward — гарантированно даёт merge-коммит. */
-  merge(branch: string, message: string): string {
-    this.git('merge', '--no-ff', '--quiet', '--no-edit', '-m', message, branch);
-    return this.git('rev-parse', 'HEAD');
-  }
-
-  /** Стешит незакоммиченные изменения. Файл должен быть уже изменён на диске. */
-  stash(message?: string): void {
-    if (message === undefined) {
-      this.git('stash', 'push', '--quiet');
-    } else {
-      this.git('stash', 'push', '--quiet', '--message', message);
     }
   }
 
