@@ -4,6 +4,5 @@
     "lib": ["ES2022"],
     "types": ["node", "vscode", "mocha"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
-  "exclude": ["tests/component/**/*"]
+  "include": ["src/**/*.ts", "tests/unit/**/*.ts", "tests/integration/**/*.ts", "tests/e2e/**/*.ts", "tests/fixtures/**/*.ts"]
 }

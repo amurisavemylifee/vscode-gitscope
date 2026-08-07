@@ -1,4 +1,5 @@
 import type { GitRepository } from '@core/git/GitRepository';
+import { annotateHunkWithWordDiff } from '@shared/diff/wordDiff';
 import type { ComparisonSummary, FileChange, FilePatch, Revision } from '@shared/model';
 import { FileContentCache } from './FileContentCache';
 
@@ -90,7 +91,9 @@ export class ComparisonService {
       path: file.path,
       status: file.status,
       binary: diff?.binary ?? false,
-      hunks: diff?.hunks ?? [],
+      // Интра-строчная разметка считается здесь, один раз на файл: в webview
+      // она пересчитывалась бы на каждой перерисовке списка.
+      hunks: (diff?.hunks ?? []).map(annotateHunkWithWordDiff),
       truncated,
       baseTotalLines,
       compareTotalLines,

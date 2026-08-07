@@ -78,3 +78,99 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* --- словный diff --- */
+
+/* Подложка плотнее, чем у строки целиком: так видно, что изменилось именно
+   здесь, а не «где-то в этой строке». */
+.gs-diff__changed--insert {
+  background: var(--gs-added-text);
+  border-radius: 2px;
+}
+
+.gs-diff__changed--delete {
+  background: var(--gs-removed-text);
+  border-radius: 2px;
+}
+
+/* --- две колонки --- */
+
+.gs-split {
+  font-family: var(--gs-font-code);
+  font-size: var(--gs-font-size-code);
+  line-height: var(--gs-line-height-code);
+  tab-size: 4;
+}
+
+/* Ширина половин одинакова во всех строках — иначе колонки разъезжаются.
+   --gs-split-code задаёт канва по самой длинной загруженной строке. */
+.gs-split__row {
+  display: grid;
+  grid-template-columns: 46px 18px var(--gs-split-code, 80ch) 46px 18px var(--gs-split-code, 80ch);
+  min-height: var(--gs-line-height-code);
+}
+
+.gs-split__cell--insert {
+  background: var(--gs-added-line);
+}
+
+.gs-split__cell--delete {
+  background: var(--gs-removed-line);
+}
+
+/* Пустая сторона: строки с этим номером на этой ревизии просто нет. */
+.gs-split__cell--empty {
+  background: color-mix(in srgb, var(--gs-fg-muted) 6%, transparent);
+}
+
+/* Разделитель между половинами. */
+.gs-split__row > :nth-child(4) {
+  border-left: 1px solid var(--gs-border);
+}
+
+.gs-split__cell.gs-diff__marker {
+  text-align: center;
+}
+
+.gs-split__cell--insert.gs-diff__marker {
+  color: var(--gs-added-fg);
+}
+
+.gs-split__cell--delete.gs-diff__marker {
+  color: var(--gs-removed-fg);
+}
+
+/* --- разворачивание контекста --- */
+
+.gs-expander {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-2);
+  height: 26px;
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--gs-accent) 7%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--gs-border) 60%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--gs-border) 60%, transparent);
+}
+
+.gs-expander__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--gs-radius-sm);
+  background: transparent;
+  color: var(--gs-accent);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-expander__button:hover {
+  background: var(--gs-bg-hover);
+}
+
+.gs-expander__label {
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+}

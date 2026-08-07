@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import type { FileChange } from '@shared/model';
-import { buildDiffRows, rowHeight, type DiffRow } from '../diff/rows';
+import type { FileChange, ViewMode } from '@shared/model';
+import { buildDiffRows, rowHeight, type ContextStore, type DiffRow } from '../diff/rows';
 import type { PatchState } from '../hooks/usePatches';
-import type { PatchTokens } from '../syntax/highlighter';
-import { HunkRow, LineRow, NoticeRow } from './DiffLines';
+import type { LineTokens, PatchTokens } from '../syntax/highlighter';
+import { ExpanderRow, HunkRow, LineRow, NoticeRow, SplitLineRow } from './DiffLines';
 import { FileHeaderRow } from './FileHeaderRow';
 import './DiffCanvas.css';
 
@@ -18,13 +18,17 @@ interface DiffCanvasProps {
   readonly files: readonly FileChange[];
   readonly patches: ReadonlyMap<string, PatchState>;
   readonly tokens: ReadonlyMap<string, PatchTokens>;
+  readonly context: ContextStore;
+  readonly viewMode: ViewMode;
   readonly collapsed: ReadonlySet<string>;
   readonly expanded: ReadonlySet<string>;
   readonly collapseOverLines: number;
   readonly lineHeight: number;
+  readonly maxLineLength: number;
   readonly scrollTarget: ScrollTarget | null;
   readonly onToggleCollapse: (path: string) => void;
   readonly onExpandLarge: (path: string) => void;
+  readonly onExpandContext: (path: string, startLine: number, endLine: number) => void;
   readonly onRequestPatch: (path: string) => void;
   readonly onVisibleFileChange: (path: string) => void;
 }
@@ -44,21 +48,25 @@ export function DiffCanvas({
   files,
   patches,
   tokens,
+  context,
+  viewMode,
   collapsed,
   expanded,
   collapseOverLines,
   lineHeight,
+  maxLineLength,
   scrollTarget,
   onToggleCollapse,
   onExpandLarge,
+  onExpandContext,
   onRequestPatch,
   onVisibleFileChange,
 }: DiffCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { rows, fileRowIndex } = useMemo(
-    () => buildDiffRows({ files, patches, collapsed, expanded, collapseOverLines }),
-    [files, patches, collapsed, expanded, collapseOverLines],
+    () => buildDiffRows({ files, patches, context, viewMode, collapsed, expanded, collapseOverLines }),
+    [files, patches, context, viewMode, collapsed, expanded, collapseOverLines],
   );
 
   const virtualizer = useVirtualizer({
@@ -81,7 +89,6 @@ export function DiffCanvas({
     virtualizer.measure();
   }, [virtualizer, rows, lineHeight]);
 
-  // Подгружаем патчи для видимых файлов и нескольких следующих.
   useEffect(() => {
     const last = Math.min(files.length - 1, lastFileIndex + PREFETCH_FILES);
     for (let index = firstFileIndex; index <= last; index += 1) {
@@ -114,7 +121,14 @@ export function DiffCanvas({
 
   return (
     <div className="gs-canvas-wrapper">
-      <div className="gs-canvas" ref={scrollRef}>
+      <div
+        className={`gs-canvas gs-canvas--${viewMode}`}
+        ref={scrollRef}
+        // Половины двух колонок обязаны быть одной ширины во всех строках,
+        // иначе колонки разъезжаются. Шрифт моноширинный, поэтому ширину
+        // самой длинной строки можно выразить в ch.
+        style={{ '--gs-split-code': `${Math.max(maxLineLength + 2, 40)}ch` } as React.CSSProperties}
+      >
         <div className="gs-canvas__list" style={{ height: `${virtualizer.getTotalSize()}px` }}>
           {items.map((item) => {
             const row = rows[item.index];
@@ -131,10 +145,11 @@ export function DiffCanvas({
                   row={row}
                   files={files}
                   tokens={tokens}
-                  collapsed={collapsed}
                   onToggleCollapse={onToggleCollapse}
                   onExpandLarge={onExpandLarge}
+                  onExpandContext={onExpandContext}
                   onRequestPatch={onRequestPatch}
+                  collapsed={collapsed}
                 />
               </div>
             );
@@ -163,6 +178,7 @@ function RowContent({
   collapsed,
   onToggleCollapse,
   onExpandLarge,
+  onExpandContext,
   onRequestPatch,
 }: {
   readonly row: DiffRow;
@@ -171,6 +187,7 @@ function RowContent({
   readonly collapsed: ReadonlySet<string>;
   readonly onToggleCollapse: (path: string) => void;
   readonly onExpandLarge: (path: string) => void;
+  readonly onExpandContext: (path: string, startLine: number, endLine: number) => void;
   readonly onRequestPatch: (path: string) => void;
 }) {
   const file = files[row.fileIndex];
@@ -178,14 +195,14 @@ function RowContent({
     return null;
   }
 
+  /** Токены строки хунка. У подгруженного контекста подсветка своя, при самой строке. */
+  const hunkTokens = (hunkIndex: number, lineIndex: number): LineTokens | undefined =>
+    hunkIndex < 0 ? undefined : tokens.get(file.path)?.hunks[hunkIndex]?.[lineIndex];
+
   switch (row.kind) {
     case 'file':
       return (
-        <FileHeaderRow
-          file={file}
-          collapsed={collapsed.has(file.path)}
-          onToggle={() => onToggleCollapse(file.path)}
-        />
+        <FileHeaderRow file={file} collapsed={collapsed.has(file.path)} onToggle={() => onToggleCollapse(file.path)} />
       );
     case 'notice':
       return (
@@ -196,7 +213,18 @@ function RowContent({
       );
     case 'hunk':
       return <HunkRow hunk={row.hunk} />;
+    case 'expander':
+      return <ExpanderRow row={row} onExpand={(from, to) => onExpandContext(file.path, from, to)} />;
     case 'line':
-      return <LineRow line={row.line} tokens={tokens.get(file.path)?.hunks[row.hunkIndex]?.[row.lineIndex]} />;
+      return <LineRow line={row.line} tokens={row.tokens ?? hunkTokens(row.hunkIndex, row.lineIndex)} />;
+    case 'split':
+      return (
+        <SplitLineRow
+          left={row.row.left}
+          right={row.row.right}
+          leftTokens={row.tokens ?? (row.row.left ? hunkTokens(row.hunkIndex, row.row.left.index) : undefined)}
+          rightTokens={row.tokens ?? (row.row.right ? hunkTokens(row.hunkIndex, row.row.right.index) : undefined)}
+        />
+      );
   }
 }

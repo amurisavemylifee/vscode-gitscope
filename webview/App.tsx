@@ -8,6 +8,7 @@ import { DiffCanvas, type ScrollTarget } from './components/DiffCanvas';
 import { EmptyState } from './components/EmptyState';
 import { FileTree } from './components/FileTree';
 import { useCodeLineHeight } from './hooks/useCodeLineHeight';
+import { useExpandedContext } from './hooks/useExpandedContext';
 import { usePanelState } from './hooks/usePanelState';
 import { usePatches } from './hooks/usePatches';
 import { useSyntaxTheme, useSyntaxTokens } from './hooks/useSyntaxTokens';
@@ -29,11 +30,12 @@ export function App() {
   const [treeWidth, setTreeWidth] = useState(stored.treeWidth ?? 260);
 
   const comparisonKey = summary ? `${summary.base.sha}..${summary.compare.sha}` : '';
-  const { patches, requestPatch } = usePatches(comparisonKey);
+  const { patches, requestPatch, maxLineLength } = usePatches(comparisonKey);
 
   const theme = useSyntaxTheme();
   const tokens = useSyntaxTokens(patches, theme);
   const lineHeight = useCodeLineHeight(theme);
+  const { context, expandContext } = useExpandedContext(comparisonKey, theme);
 
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
@@ -192,13 +194,17 @@ export function App() {
           files={files}
           patches={patches}
           tokens={tokens}
+          context={context}
+          viewMode={viewMode ?? settings.viewMode}
           collapsed={collapsed}
           expanded={expanded}
           collapseOverLines={settings.collapseFilesOverLines}
           lineHeight={lineHeight}
+          maxLineLength={maxLineLength}
           scrollTarget={scrollTarget}
           onToggleCollapse={toggleCollapse}
           onExpandLarge={expandLarge}
+          onExpandContext={expandContext}
           onRequestPatch={requestPatch}
           onVisibleFileChange={setActivePath}
         />

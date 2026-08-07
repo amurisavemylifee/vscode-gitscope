@@ -42,6 +42,8 @@ const build = (params: Partial<Parameters<typeof buildDiffRows>[0]> = {}) =>
   buildDiffRows({
     files: [file()],
     patches: new Map([['src/a.ts', ready()]]),
+    context: new Map(),
+    viewMode: 'unified',
     collapsed: new Set(),
     expanded: new Set(),
     collapseOverLines: 1500,
@@ -179,5 +181,138 @@ describe('rowHeight', () => {
 
     expect(file && rowHeight(file, 19)).toBe(34);
     expect(hunkRow && rowHeight(hunkRow, 19)).toBe(24);
+  });
+});
+
+describe('промежутки между хунками', () => {
+  const hunkAt = (compareStart: number, count: number): Hunk => ({
+    baseStart: compareStart,
+    baseCount: count,
+    compareStart,
+    compareCount: count,
+    header: '',
+    lines: Array.from({ length: count }, (_, index) => ({
+      kind: 'context' as const,
+      text: `строка ${compareStart + index}`,
+      baseLine: compareStart + index,
+      compareLine: compareStart + index,
+    })),
+  });
+
+  const withGaps = (params: Partial<Parameters<typeof buildDiffRows>[0]> = {}) =>
+    build({
+      patches: new Map([
+        ['src/a.ts', ready({ hunks: [hunkAt(10, 2)], compareTotalLines: 20, baseTotalLines: 20 })],
+      ]),
+      ...params,
+    });
+
+  it('предлагает развернуть строки до первого и после последнего хунка', () => {
+    const rows = withGaps().rows;
+
+    expect(kinds(rows)).toEqual(['file', 'expander', 'hunk', 'line', 'line', 'expander']);
+    expect(rows[1]).toMatchObject({ compareStart: 1, compareEnd: 9, baseOffset: 0 });
+    expect(rows[5]).toMatchObject({ compareStart: 12, compareEnd: 20 });
+  });
+
+  it('подгруженные строки показывает как контекст, на остаток оставляет кнопку', () => {
+    const rows = withGaps({
+      context: new Map([['src/a.ts', new Map([[8, { text: 'восьмая' }], [9, { text: 'девятая' }]])]]),
+    }).rows;
+
+    expect(kinds(rows)).toEqual(['file', 'expander', 'line', 'line', 'hunk', 'line', 'line', 'expander']);
+    expect(rows[1]).toMatchObject({ compareStart: 1, compareEnd: 7 });
+    expect(rows[2]).toMatchObject({ kind: 'line', line: { text: 'восьмая', compareLine: 8, baseLine: 8 } });
+  });
+
+  it('переносит подсветку подгруженной строки в саму строку', () => {
+    const tokens = [{ content: 'восьмая', color: '#fff', offset: 0 }];
+    const rows = withGaps({
+      context: new Map([['src/a.ts', new Map([[8, { text: 'восьмая', tokens }]])]]),
+    }).rows;
+    const line = rows.find((row) => row.kind === 'line' && row.hunkIndex === -1);
+
+    expect(line).toMatchObject({ tokens });
+  });
+
+  it('у обрезанного патча кнопок разворота нет — промежутки посчитались бы неверно', () => {
+    const rows = build({
+      patches: new Map([
+        ['src/a.ts', ready({ hunks: [hunkAt(10, 2)], compareTotalLines: 20, truncated: true })],
+      ]),
+    }).rows;
+
+    expect(kinds(rows).filter((kind) => kind === 'expander')).toEqual([]);
+  });
+
+  it('без сведений о размере файла хвостовой промежуток не выдумывается', () => {
+    const rows = build({
+      patches: new Map([['src/a.ts', ready({ hunks: [hunkAt(1, 2)] })]]),
+    }).rows;
+
+    expect(kinds(rows)).toEqual(['file', 'hunk', 'line', 'line']);
+  });
+});
+
+describe('режим двух колонок', () => {
+  it('строит выровненные пары вместо одиночных строк', () => {
+    const rows = build({
+      viewMode: 'split',
+      patches: new Map([
+        [
+          'src/a.ts',
+          ready({
+            hunks: [
+              {
+                baseStart: 1,
+                baseCount: 1,
+                compareStart: 1,
+                compareCount: 1,
+                header: '',
+                lines: [
+                  { kind: 'delete', text: 'было', baseLine: 1 },
+                  { kind: 'insert', text: 'стало', compareLine: 1 },
+                ],
+              },
+            ],
+          }),
+        ],
+      ]),
+    }).rows;
+
+    expect(kinds(rows)).toEqual(['file', 'hunk', 'split']);
+    expect(rows[2]).toMatchObject({
+      row: { left: { line: { text: 'было' } }, right: { line: { text: 'стало' } } },
+    });
+  });
+
+  it('строку подгруженного контекста ставит на обе стороны', () => {
+    const rows = build({
+      viewMode: 'split',
+      patches: new Map([
+        [
+          'src/a.ts',
+          ready({
+            hunks: [
+              {
+                baseStart: 5,
+                baseCount: 1,
+                compareStart: 5,
+                compareCount: 1,
+                header: '',
+                lines: [{ kind: 'context', text: 'пятая', baseLine: 5, compareLine: 5 }],
+              },
+            ],
+            compareTotalLines: 5,
+          }),
+        ],
+      ]),
+      context: new Map([['src/a.ts', new Map([[4, { text: 'четвёртая' }]])]]),
+    }).rows;
+    const contextRow = rows.find((row) => row.kind === 'split' && row.hunkIndex === -1);
+
+    expect(contextRow).toMatchObject({
+      row: { left: { line: { text: 'четвёртая' } }, right: { line: { text: 'четвёртая' } } },
+    });
   });
 });

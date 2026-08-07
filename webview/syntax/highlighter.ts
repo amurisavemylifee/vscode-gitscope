@@ -49,8 +49,12 @@ export function detectTheme(): SyntaxTheme {
  * целиком, а не построчно. Это важно для многострочных конструкций:
  * построчная подсветка разваливает блочные комментарии и шаблонные строки.
  */
-export async function highlightPatch(patch: FilePatch, theme: SyntaxTheme): Promise<PatchTokens | undefined> {
-  const language = languageForPath(patch.path);
+/** Готовит токенизатор для языка файла. `undefined` — язык вне списка поддерживаемых. */
+async function prepareTokenizer(
+  path: string,
+  theme: SyntaxTheme,
+): Promise<((lines: readonly string[]) => LineTokens[]) | undefined> {
+  const language = languageForPath(path);
   const loader = language === undefined ? undefined : languageLoader(language);
   if (language === undefined || loader === undefined) {
     return undefined;
@@ -62,14 +66,31 @@ export async function highlightPatch(patch: FilePatch, theme: SyntaxTheme): Prom
     loadedLanguages.add(language);
   }
 
-  const tokenize = (lines: readonly string[]): LineTokens[] => {
+  return (lines) => {
     if (lines.length === 0) {
       return [];
     }
     const { tokens } = highlighter.codeToTokens(lines.join('\n'), { lang: language, theme });
-    // Длина обязана совпасть со списком строк: ниже по ней идёт выравнивание.
+    // Длина обязана совпасть со списком строк: по ней идёт выравнивание.
     return lines.map((_, index) => tokens[index] ?? []);
   };
+}
+
+/** Подсветка для строк, подгруженных при разворачивании контекста. */
+export async function highlightLines(
+  path: string,
+  lines: readonly string[],
+  theme: SyntaxTheme,
+): Promise<LineTokens[] | undefined> {
+  const tokenize = await prepareTokenizer(path, theme);
+  return tokenize?.(lines);
+}
+
+export async function highlightPatch(patch: FilePatch, theme: SyntaxTheme): Promise<PatchTokens | undefined> {
+  const tokenize = await prepareTokenizer(patch.path, theme);
+  if (tokenize === undefined) {
+    return undefined;
+  }
 
   return {
     hunks: patch.hunks.map((hunk) => {

@@ -5,5 +5,12 @@
     "types": ["node"],
     "jsx": "react-jsx"
   },
-  "include": ["webview/**/*.ts", "webview/**/*.tsx", "webview/**/*.d.ts", "src/shared/**/*.ts", "tests/component/**/*.tsx"]
+  "include": [
+    "webview/**/*.ts",
+    "webview/**/*.tsx",
+    "webview/**/*.d.ts",
+    "src/shared/**/*.ts",
+    "tests/webview/**/*.ts",
+    "tests/webview/**/*.tsx"
+  ]
 }
