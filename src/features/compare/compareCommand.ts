@@ -6,6 +6,19 @@ import { ComparePanel } from './ComparePanel';
 import { pickRevision } from './RevisionPicker';
 
 /**
+ * Аргументы команды. Все необязательные: без них расширение спрашивает само.
+ *
+ * Аргументы делают команду вызываемой из сочетаний клавиш, задач и других
+ * расширений — и заодно позволяют e2e-тестам пройти сценарий целиком, не
+ * пытаясь кликать по QuickPick.
+ */
+export interface CompareCommandArgs {
+  readonly repositoryRoot?: string;
+  readonly base?: string;
+  readonly compare?: string;
+}
+
+/**
  * Команда «Сравнить ревизии…»: выбрать репозиторий, выбрать две точки истории,
  * открыть панель.
  *
@@ -16,27 +29,41 @@ export async function runCompareCommand(
   extensionUri: vscode.Uri,
   locator: RepositoryLocator,
   logger: Logger,
+  args: CompareCommandArgs = {},
 ): Promise<void> {
-  const repository = await locator.pick();
+  const repository =
+    args.repositoryRoot === undefined
+      ? await locator.pick()
+      : (await locator.list()).find((candidate) => candidate.root === args.repositoryRoot);
+
   if (!repository) {
+    if (args.repositoryRoot !== undefined) {
+      throw new Error(`Репозиторий «${args.repositoryRoot}» не найден в этом окне`);
+    }
     return;
   }
 
   const revisions = new RevisionService(repository);
-  const defaults = await revisions.suggestDefaults();
+  const defaults = args.base === undefined || args.compare === undefined ? await revisions.suggestDefaults() : {};
 
-  const base = await pickRevision(revisions, {
-    title: 'Базовая ревизия — с чем сравниваем',
-    ...(defaults.base !== undefined ? { current: defaults.base } : {}),
-  });
+  const base =
+    args.base === undefined
+      ? await pickRevision(revisions, {
+          title: 'Базовая ревизия — с чем сравниваем',
+          ...(defaults.base !== undefined ? { current: defaults.base } : {}),
+        })
+      : await revisions.resolve(args.base);
   if (!base) {
     return;
   }
 
-  const compare = await pickRevision(revisions, {
-    title: `Сравниваемая ревизия — что сравниваем с «${base.label}»`,
-    ...(defaults.compare !== undefined ? { current: defaults.compare } : {}),
-  });
+  const compare =
+    args.compare === undefined
+      ? await pickRevision(revisions, {
+          title: `Сравниваемая ревизия — что сравниваем с «${base.label}»`,
+          ...(defaults.compare !== undefined ? { current: defaults.compare } : {}),
+        })
+      : await revisions.resolve(args.compare);
   if (!compare) {
     return;
   }

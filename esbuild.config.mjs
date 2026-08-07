@@ -1,7 +1,11 @@
 import esbuild from 'esbuild';
 
+import { globSync } from 'node:fs';
+
 const watch = process.argv.includes('--watch');
 const production = process.argv.includes('--production');
+// e2e-тесты запускаются внутри настоящего VS Code и должны быть обычным JS.
+const e2e = process.argv.includes('--e2e');
 
 /**
  * Плагин печатает результат каждой пересборки одной строкой — в watch-режиме
@@ -22,21 +26,34 @@ const reportPlugin = {
   },
 };
 
-const context = await esbuild.context({
-  entryPoints: ['src/extension.ts'],
+const shared = {
   bundle: true,
-  outfile: 'dist/extension.js',
   format: 'cjs',
   platform: 'node',
   target: 'node20',
   // vscode поставляется хостом, его нельзя бандлить
   external: ['vscode'],
-  sourcemap: !production,
-  minify: production,
   tsconfig: 'tsconfig.json',
   logLevel: 'silent',
   plugins: [reportPlugin],
-});
+};
+
+const context = await esbuild.context(
+  e2e
+    ? {
+        ...shared,
+        entryPoints: globSync('tests/e2e/**/*.test.ts'),
+        outdir: 'dist/tests/e2e',
+        sourcemap: true,
+      }
+    : {
+        ...shared,
+        entryPoints: ['src/extension.ts'],
+        outfile: 'dist/extension.js',
+        sourcemap: !production,
+        minify: production,
+      },
+);
 
 if (watch) {
   await context.watch();

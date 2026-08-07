@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { COMPARE_PANEL_VIEW_TYPE } from '@shared/protocol';
 import { ComparePanel } from './features/compare/ComparePanel';
-import { runCompareCommand } from './features/compare/compareCommand';
+import { runCompareCommand, type CompareCommandArgs } from './features/compare/compareCommand';
 import { createOutputChannelLogger } from './services/logging';
 import { RepositoryLocator } from './services/RepositoryLocator';
 
@@ -11,9 +11,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     logger,
-    vscode.commands.registerCommand('gitscope.compareRevisions', async () => {
+    vscode.commands.registerCommand('gitscope.compareRevisions', async (args?: CompareCommandArgs) => {
       try {
-        await runCompareCommand(context.extensionUri, locator, logger);
+        await runCompareCommand(context.extensionUri, locator, logger, args ?? {});
       } catch (error) {
         logger.error('Команда сравнения завершилась ошибкой', error);
         void vscode.window.showErrorMessage(

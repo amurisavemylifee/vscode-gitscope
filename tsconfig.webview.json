@@ -1,8 +1,14 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "node"
+    ],
     "jsx": "react-jsx"
   },
   "include": [
@@ -11,6 +17,8 @@
     "webview/**/*.d.ts",
     "src/shared/**/*.ts",
     "tests/webview/**/*.ts",
-    "tests/webview/**/*.tsx"
+    "tests/webview/**/*.tsx",
+    "tests/component/**/*.ts",
+    "tests/component/**/*.tsx"
   ]
 }

@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 const resolvePath = (path: string) => fileURLToPath(new URL(path, import.meta.url));
@@ -11,20 +12,38 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts', 'tests/webview/**/*.test.ts'],
-    environment: 'node',
-    // Интеграционные тесты создают настоящие git-репозитории во временной
-    // папке — им нужен запас по времени на медленной файловой системе.
-    testTimeout: 20_000,
+    projects: [
+      {
+        // Чистая логика обеих сторон канала: git-слой, модель, сборка строк.
+        extends: true,
+        test: {
+          name: 'логика',
+          environment: 'node',
+          include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts', 'tests/webview/**/*.test.ts'],
+          // Интеграционные тесты создают настоящие git-репозитории во временной
+          // папке — им нужен запас по времени на медленной файловой системе.
+          testTimeout: 20_000,
+        },
+      },
+      {
+        // React-компоненты панели.
+        extends: true,
+        plugins: [react()],
+        test: {
+          name: 'компоненты',
+          environment: 'jsdom',
+          include: ['tests/component/**/*.test.ts', 'tests/component/**/*.test.tsx'],
+          setupFiles: ['tests/component/setup.ts'],
+        },
+      },
+    ],
     coverage: {
       provider: 'v8',
-      // React-компоненты появятся здесь вместе с компонентными тестами;
-      // пока порог считается по чистой логике обеих сторон канала.
-      include: ['src/core/**', 'src/shared/**', 'webview/diff/**', 'webview/format.ts'],
+      include: ['src/core/**', 'src/shared/**', 'webview/**'],
       // Таблица грамматик — сорок ленивых import(), которые в тестах никто не
       // выполняет: они утянули бы покрытие функций вниз, ничего не измеряя.
       // Сама логика сопоставления расширений тестируется отдельно.
-      exclude: ['webview/syntax/languages.ts'],
+      exclude: ['webview/syntax/languages.ts', 'webview/main.tsx', 'webview/vite-env.d.ts'],
       reporter: ['text', 'html'],
       thresholds: {
         lines: 80,
