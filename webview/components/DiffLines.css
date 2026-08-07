@@ -48,7 +48,9 @@
 }
 
 .gs-diff__code {
-  padding-right: var(--gs-space-4);
+  padding: 0 var(--gs-space-4) 0 0;
+  border-radius: 0;
+  background-color: rgba(0, 0, 0, 0);
   font: inherit;
   white-space: pre;
 }
@@ -106,7 +108,10 @@
    --gs-split-code задаёт канва по самой длинной загруженной строке. */
 .gs-split__row {
   display: grid;
-  grid-template-columns: 46px 18px var(--gs-split-code, 80ch) 46px 18px var(--gs-split-code, 80ch);
+  grid-template-columns: 46px 18px var(--gs-split-code, 80ch) 46px 18px var(
+      --gs-split-code,
+      80ch
+    );
   min-height: var(--gs-line-height-code);
 }
 
