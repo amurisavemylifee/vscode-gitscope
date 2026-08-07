@@ -1,0 +1,18 @@
+.gs-gcanvas {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: auto;
+}
+
+.gs-gcanvas__list {
+  position: relative;
+  width: 100%;
+}
+
+.gs-gcanvas__row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}

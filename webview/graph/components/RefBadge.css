@@ -1,0 +1,45 @@
+.gs-ref-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  max-width: 16ch;
+  padding: 1px 6px 1px 5px;
+  border: 1px solid transparent;
+  border-radius: var(--gs-radius-lg);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.gs-ref-badge:hover {
+  border-color: currentColor;
+}
+
+.gs-ref-badge__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-ref-badge--branch {
+  color: var(--gs-added-fg);
+}
+
+.gs-ref-badge--current {
+  color: var(--gs-accent);
+  font-weight: 600;
+}
+
+.gs-ref-badge--remote {
+  color: var(--gs-renamed-fg);
+}
+
+.gs-ref-badge--tag {
+  color: var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
+}
+
+.gs-ref-badge--stash {
+  color: var(--gs-fg-muted);
+}

@@ -24,9 +24,14 @@ export default defineConfig(({ mode }) => ({
     // Имена без хешей: панель собирает ссылки на ассеты вручную, в webview нет
     // манифеста, по которому можно было бы разрешить хешированное имя.
     rollupOptions: {
-      input: resolvePath('./webview/main.tsx'),
+      // Каждая панель — свой вход: у графа своё React-приложение, общего рантайма
+      // с сравнением нет, а делить один бандл на несколько панелей незачем.
+      input: {
+        main: resolvePath('./webview/main.tsx'),
+        graph: resolvePath('./webview/graph/main.tsx'),
+      },
       output: {
-        entryFileNames: 'main.js',
+        entryFileNames: '[name].js',
         chunkFileNames: '[name].js',
         assetFileNames: '[name][extname]',
       },

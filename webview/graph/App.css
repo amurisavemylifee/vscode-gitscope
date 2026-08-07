@@ -1,0 +1,122 @@
+.gs-gapp {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.gs-gapp__body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.gs-gapp__error-detail {
+  margin-top: var(--gs-space-2);
+  color: var(--gs-fg-muted);
+  font-size: 12px;
+}
+
+/* Полоса перетаскивания шириной в пиксель, но с зоной захвата в 7px. */
+.gs-gapp__resizer {
+  position: relative;
+  flex: none;
+  width: 7px;
+  margin: 0 -3px;
+  cursor: col-resize;
+  z-index: 2;
+}
+
+.gs-gapp__resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 1px;
+  background: transparent;
+  transition: background 120ms ease;
+}
+
+.gs-gapp__resizer:hover::after {
+  background: var(--gs-focus);
+}
+
+/* --- шапка --- */
+
+.gs-gheader {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--gs-space-2);
+  min-height: 32px;
+  padding: var(--gs-space-2) var(--gs-space-3);
+  border-bottom: 1px solid var(--gs-border);
+  background: var(--gs-bg-raised);
+}
+
+.gs-gheader__repo {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-gheader__count {
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.gs-gheader__spacer {
+  flex: 1 1 auto;
+}
+
+.gs-gheader__filter {
+  position: relative;
+}
+
+.gs-gheader__popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 10;
+  border: 1px solid var(--gs-border);
+  border-radius: var(--gs-radius-md);
+  background: var(--gs-bg-raised);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.gs-gheader__icon-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  border: none;
+  border-radius: var(--gs-radius-sm);
+  background: transparent;
+  color: var(--gs-fg-muted);
+}
+
+.gs-gheader__icon-button:hover:not(:disabled) {
+  background: var(--gs-bg-hover);
+  color: var(--gs-fg);
+}
+
+.gs-gheader__icon-button--spinning svg {
+  animation: gs-gspin 900ms linear infinite;
+}
+
+@keyframes gs-gspin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-gheader__icon-button--spinning svg {
+    animation: none;
+  }
+}

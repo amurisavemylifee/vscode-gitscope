@@ -11,6 +11,7 @@ export type IconName =
   | 'remote'
   | 'tag'
   | 'commit'
+  | 'stash'
   | 'swap'
   | 'refresh'
   | 'download'
@@ -30,6 +31,7 @@ const PATHS: Record<IconName, string> = {
   remote: 'M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z',
   tag: 'M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0l-7.2-7.2A2 2 0 013 12V5a2 2 0 012-2h7a2 2 0 011.4.6l7.2 7.2a2 2 0 010 2.6zM7.5 7.5h.01',
   commit: 'M12 16a4 4 0 100-8 4 4 0 000 8zM1.05 12H8M16 12h6.95',
+  stash: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
   swap: 'M7 4v13M7 4L4 7M7 4l3 3M17 20V7M17 20l-3-3M17 20l3-3',
   refresh: 'M21 12a9 9 0 11-3.5-7.1M21 3v6h-6',
   download: 'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3',

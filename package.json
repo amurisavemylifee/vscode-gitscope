@@ -23,7 +23,8 @@
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
-    "onWebviewPanel:gitscope.compare"
+    "onWebviewPanel:gitscope.compare",
+    "onWebviewPanel:gitscope.graph"
   ],
   "contributes": {
     "commands": [
@@ -32,6 +33,12 @@
         "title": "Сравнить ревизии…",
         "category": "GitScope",
         "icon": "$(git-compare)"
+      },
+      {
+        "command": "gitscope.showGitGraph",
+        "title": "Открыть граф коммитов…",
+        "category": "GitScope",
+        "icon": "$(git-commit)"
       }
     ],
     "configuration": {

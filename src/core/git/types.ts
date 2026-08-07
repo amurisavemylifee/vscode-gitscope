@@ -25,3 +25,23 @@ export interface CommitInfo {
   /** ISO-8601 с таймзоной автора. */
   readonly authoredAt: string;
 }
+
+/** Коммит графа: то же самое, что CommitInfo, плюс SHA родителей для рёбер графа. */
+export interface GraphCommitInfo extends CommitInfo {
+  /** SHA родителей в порядке git (первый — «основная» линия). Пусто у корневого коммита. */
+  readonly parents: readonly string[];
+}
+
+/** Одна запись `git stash list`. */
+export interface StashInfo {
+  /** Индекс в стеке: 0 у stash@{0}. */
+  readonly index: number;
+  /** Полная ссылка, например `stash@{0}`. */
+  readonly ref: string;
+  readonly sha: string;
+  /** parents[0] — коммит, на котором был сделан стеш. */
+  readonly parents: readonly string[];
+  readonly message: string;
+  readonly authorName: string;
+  readonly authoredAt: string;
+}

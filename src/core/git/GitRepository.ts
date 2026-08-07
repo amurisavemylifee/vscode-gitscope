@@ -2,12 +2,14 @@ import { stat } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
 import type { GitExecutor } from './GitExecutor';
 import { GitError, RevisionNotFoundError } from './errors';
+import { GRAPH_LOG_FORMAT, parseGraphLog } from './parsers/parseGraphLog';
 import { LOG_FORMAT, parseLog } from './parsers/parseLog';
 import { parseNameStatus, type NameStatusEntry } from './parsers/parseNameStatus';
 import { parseNumstat, type NumstatEntry } from './parsers/parseNumstat';
 import { REF_FORMAT, parseRefs } from './parsers/parseRefs';
+import { parseStashes, STASH_FORMAT } from './parsers/parseStashes';
 import { parseUnifiedDiff, type ParsedFileDiff } from './parsers/parseUnifiedDiff';
-import type { CommitInfo, RefInfo } from './types';
+import type { CommitInfo, GraphCommitInfo, RefInfo, StashInfo } from './types';
 
 export interface AbortOption {
   readonly signal?: AbortSignal;
@@ -19,6 +21,12 @@ export interface ListCommitsOptions extends AbortOption {
   readonly query?: string;
   /** Ограничить историю этой ревизией. По умолчанию — все ссылки. */
   readonly revision?: string;
+}
+
+export interface ListGraphCommitsOptions extends AbortOption {
+  /** Ссылки, с которых начинается обход истории. Пусто — как обычный `git log` (HEAD). */
+  readonly refs?: readonly string[];
+  readonly limit?: number;
 }
 
 export interface PatchOptions extends AbortOption {
@@ -115,6 +123,47 @@ export class GitRepository {
 
     const output = await this.git.text(args, { cwd: this.root, ...(signal ? { signal } : {}) });
     return parseLog(output);
+  }
+
+  /**
+   * Локальные ветки, отсортированные по дате последнего коммита (сначала свежие).
+   *
+   * Основа для дефолтного набора дорожек графа: вместо всех веток репозитория берутся
+   * только недавно живые — старые ветки закрытых фич не должны рвать раскладку.
+   */
+  async listBranchesByRecency(limit: number, options: AbortOption = {}): Promise<RefInfo[]> {
+    const output = await this.git.text(
+      ['for-each-ref', '--sort=-committerdate', `--format=${REF_FORMAT}`, `--count=${limit}`, 'refs/heads'],
+      { cwd: this.root, ...options },
+    );
+    return parseRefs(output);
+  }
+
+  /**
+   * История коммитов с родителями — материал для построения графа.
+   *
+   * `--date-order` (не `--topo-order`) гарантирует то же самое «ни один родитель не
+   * показан раньше всех своих детей», но сортирует «готовые» коммиты по времени —
+   * так граф читается сверху вниз хронологически, как в gitk и большинстве графических
+   * клиентов. Это единственный флаг сортировки: git считает их взаимоисключающими.
+   */
+  async listGraphCommits({ refs = [], limit = 500, signal }: ListGraphCommitsOptions = {}): Promise<
+    GraphCommitInfo[]
+  > {
+    const args = ['log', '--date-order', `--format=${GRAPH_LOG_FORMAT}`, `--max-count=${limit}`];
+    args.push(...refs, '--');
+
+    const output = await this.git.text(args, { cwd: this.root, ...(signal ? { signal } : {}) });
+    return parseGraphLog(output);
+  }
+
+  /** Стеши репозитория, в том же виде, что и коммиты графа (с родителями). */
+  async listStashes(options: AbortOption = {}): Promise<StashInfo[]> {
+    const output = await this.git.text(['stash', 'list', `--format=${STASH_FORMAT}`], {
+      cwd: this.root,
+      ...options,
+    });
+    return parseStashes(output);
   }
 
   /** Список изменённых файлов: статусы, переименования, копирования. */
