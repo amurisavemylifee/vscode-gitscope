@@ -1,46 +1,7 @@
-.gs-gcanvas-wrap {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-}
-
-/*
- * Единая сетка колонок для шапки и всех строк — от неё зависит, что автор, дата
- * и sha стоят ровными столбцами по всему графу. Ширина области дорожек приходит
- * переменной от канвы: она зависит от того, сколько дорожек в этом графе.
- */
-.gs-grid {
-  display: grid;
-  grid-template-columns: var(--gs-lane-area, 54px) minmax(0, 1fr) 17ch 13ch 9ch;
-  gap: var(--gs-space-3);
-  /* Отступ слева обязателен: без него крайняя дорожка обрезается краем окна. */
-  padding: 0 var(--gs-space-4) 0 var(--gs-space-3);
-}
-
-.gs-gcanvas__head {
-  flex: none;
-  align-items: center;
-  height: 30px;
-  border-bottom: 1px solid var(--gs-border);
-  background: var(--gs-bg);
-  color: var(--gs-fg-muted);
-  font-size: 10px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  user-select: none;
-}
-
-.gs-gcanvas__head-sha {
-  text-align: right;
-}
-
 .gs-gcanvas {
   position: relative;
   flex: 1 1 auto;
-  min-height: 0;
+  min-width: 0;
   overflow: auto;
 }
 
@@ -69,34 +30,10 @@
   position: sticky;
   bottom: 0;
   z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--gs-space-2);
-  padding: 6px var(--gs-space-3);
+  padding: 4px var(--gs-space-3);
   border-top: 1px solid var(--gs-border);
   background: var(--gs-bg-raised);
   color: var(--gs-fg-muted);
   font-size: 11px;
-}
-
-.gs-gcanvas__spinner {
-  width: 11px;
-  height: 11px;
-  border: 1.5px solid color-mix(in srgb, currentColor 30%, transparent);
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: gs-gcanvas-spin 700ms linear infinite;
-}
-
-@keyframes gs-gcanvas-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gs-gcanvas__spinner {
-    animation: none;
-  }
+  text-align: center;
 }

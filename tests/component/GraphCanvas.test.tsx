@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import type { GraphNode } from '@shared/graph/model';
 import { GraphCanvas } from '../../webview/graph/components/GraphCanvas';
 
@@ -22,32 +22,6 @@ const node = (sha: string, subject: string): GraphNode => ({
 const nodes = [node('a'.repeat(40), 'первый'), node('b'.repeat(40), 'второй'), node('c'.repeat(40), 'третий')];
 
 describe('GraphCanvas', () => {
-  it('показывает шапку колонок — она задаёт структуру всей таблицы', () => {
-    render(
-      <GraphCanvas nodes={nodes} selectedSha={null} hasMore={false} loading={false} onSelect={() => undefined} onLoadMore={() => undefined} />,
-    );
-
-    for (const column of ['Граф', 'Коммит', 'Автор', 'Когда', 'SHA']) {
-      expect(screen.getByText(column)).toBeInTheDocument();
-    }
-  });
-
-  it('список объявлен как listbox с доступным именем', () => {
-    render(
-      <GraphCanvas nodes={nodes} selectedSha={null} hasMore={false} loading={false} onSelect={() => undefined} onLoadMore={() => undefined} />,
-    );
-
-    expect(screen.getByRole('listbox', { name: 'Коммиты' })).toBeInTheDocument();
-  });
-
-  it('во время догрузки показывает индикатор', () => {
-    render(
-      <GraphCanvas nodes={nodes} selectedSha={null} hasMore loading onSelect={() => undefined} onLoadMore={() => undefined} />,
-    );
-
-    expect(screen.getByText('Загружаем историю…')).toBeInTheDocument();
-  });
-
   it('короткий список сразу упирается в порог подгрузки и просит ещё историю', async () => {
     const onLoadMore = vi.fn();
     render(

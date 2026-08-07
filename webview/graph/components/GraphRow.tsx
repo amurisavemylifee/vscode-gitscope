@@ -1,18 +1,17 @@
 import type { GraphEntity, GraphNode } from '@shared/graph/model';
 import { formatAbsoluteTime, formatRelativeTime } from '@shared/time';
-import { Avatar } from './Avatar';
 import { badgeAppearance, RefBadge, type BadgeEntity } from './RefBadge';
 import type { RowLanes, RowSegment } from '../lanes';
 import './GraphRow.css';
 
-export const ROW_HEIGHT = 36;
-export const LANE_WIDTH = 22;
+export const ROW_HEIGHT = 30;
+export const LANE_WIDTH = 15;
 /** Число различимых цветов дорожек — дальше циклически повторяются. */
 export const LANE_PALETTE_SIZE = 8;
 
-const DOT_RADIUS = 5;
-/** Кольцо merge-коммита чуть крупнее точки: слияние — узловая точка истории. */
-const MERGE_DOT_RADIUS = 5.5;
+const DOT_RADIUS = 4;
+/** Радиус кольца merge-коммита: чуть больше обычной точки, чтобы слияние читалось с одного взгляда. */
+const MERGE_DOT_RADIUS = 4.5;
 
 interface GraphRowProps {
   readonly node: GraphNode;
@@ -22,19 +21,15 @@ interface GraphRowProps {
   readonly onSelect: (entity: GraphEntity) => void;
 }
 
-/** Одна строка графа: дорожки, ссылки, тема коммита, автор, дата и sha. */
+/** Одна строка графа: дорожки слева, коммит и бейджи справа. */
 export function GraphRow({ node, rowLanes, laneCount, selected, onSelect }: GraphRowProps) {
   const { commit } = node;
   const isMerge = commit.parents.length > 1;
-  const badges: BadgeEntity[] = [
-    ...node.branches.map((ref): BadgeEntity => ({ kind: 'branch', ref })),
-    ...node.tags.map((ref): BadgeEntity => ({ kind: 'tag', ref })),
-    ...node.stashes.map((stash): BadgeEntity => ({ kind: 'stash', stash })),
-  ];
+  const decorations = node.branches.length + node.tags.length + node.stashes.length;
 
   return (
     <div
-      className={`gs-grid gs-grow${selected ? ' gs-grow--selected' : ''}`}
+      className={`gs-grow${selected ? ' gs-grow--selected' : ''}`}
       role="option"
       aria-selected={selected}
       onClick={() => onSelect({ kind: 'commit', commit })}
@@ -57,37 +52,47 @@ export function GraphRow({ node, rowLanes, laneCount, selected, onSelect }: Grap
         />
       </svg>
 
-      <div className="gs-grow__message">
-        {badges.map((badge) => {
-          const { icon, tone } = badgeAppearance(badge);
-          const label = badge.kind === 'stash' ? badge.stash.ref : badge.ref.name;
-          return (
-            <RefBadge
-              key={`${badge.kind}:${label}`}
-              icon={icon}
-              tone={tone}
-              label={label}
-              onClick={() => onSelect(badge)}
-            />
-          );
-        })}
+      <span className="gs-grow__main">
+        {decorations > 0 ? (
+          <span className="gs-grow__badges">
+            {node.branches.map((ref) => (
+              <RefBadgeFor key={`branch:${ref.kind}:${ref.name}`} entity={{ kind: 'branch', ref }} onSelect={onSelect} />
+            ))}
+            {node.tags.map((ref) => (
+              <RefBadgeFor key={`tag:${ref.name}`} entity={{ kind: 'tag', ref }} onSelect={onSelect} />
+            ))}
+            {node.stashes.map((stash) => (
+              <RefBadgeFor key={`stash:${stash.ref}`} entity={{ kind: 'stash', stash }} onSelect={onSelect} />
+            ))}
+          </span>
+        ) : null}
         <span className="gs-grow__subject" title={commit.subject}>
           {commit.subject}
         </span>
-      </div>
+      </span>
 
-      <div className="gs-grow__author">
-        <Avatar name={commit.authorName} size={20} />
-        <span className="gs-grow__author-name">{commit.authorName}</span>
-      </div>
-
-      <div className="gs-grow__date" title={formatAbsoluteTime(commit.authoredAt)}>
+      <span className="gs-grow__author" title={commit.authorName}>
+        {commit.authorName}
+      </span>
+      <span className="gs-grow__date" title={formatAbsoluteTime(commit.authoredAt)}>
         {formatRelativeTime(commit.authoredAt)}
-      </div>
-
-      <div className="gs-grow__sha">{commit.shortSha}</div>
+      </span>
+      <span className="gs-grow__sha">{commit.shortSha}</span>
     </div>
   );
+}
+
+function RefBadgeFor({
+  entity,
+  onSelect,
+}: {
+  readonly entity: BadgeEntity;
+  readonly onSelect: (entity: GraphEntity) => void;
+}) {
+  const { icon, tone } = badgeAppearance(entity);
+  const label = entity.kind === 'stash' ? entity.stash.ref : entity.ref.name;
+
+  return <RefBadge icon={icon} tone={tone} label={label} onClick={() => onSelect(entity)} />;
 }
 
 function laneX(lane: number): number {
@@ -98,9 +103,9 @@ function laneX(lane: number): number {
  * Отрезок одной дорожки внутри строки.
  *
  * Переход между дорожками рисуется кубической кривой, а не диагональю: на
- * плотной истории ломаные дают «частокол» из острых углов, и глаз перестаёт
- * прослеживать отдельную линию. Контрольные точки стоят на середине по
- * вертикали — получается симметричная S, у которой начало и конец строго
+ * плотной истории ломаные линии дают «частокол» из острых углов, и глаз
+ * перестаёт прослеживать отдельную линию. Контрольные точки стоят на середине
+ * по вертикали — получается симметричная S, у которой начало и конец строго
  * вертикальны и стыкуются с соседними строками без излома.
  */
 function LaneSegment({ segment, ownLane }: { readonly segment: RowSegment; readonly ownLane: number }) {

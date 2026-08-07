@@ -2,131 +2,89 @@
   display: flex;
   flex: none;
   flex-direction: column;
-  gap: var(--gs-space-4);
+  gap: var(--gs-space-3);
   min-width: 0;
-  padding: var(--gs-space-4);
+  padding: var(--gs-space-3);
   overflow-y: auto;
   border-left: 1px solid var(--gs-border);
   background: var(--vscode-sideBar-background, var(--gs-bg));
 }
 
-/* --- тип сущности --- */
+/* --- шапка сущности --- */
 
-.gs-details__kind {
+.gs-details__head {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   align-self: flex-start;
-  padding: 3px 10px 3px 8px;
-  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  padding: 2px 8px 2px 6px;
   border-radius: var(--gs-radius-lg);
-  background: color-mix(in srgb, currentColor 12%, transparent);
+  background: color-mix(in srgb, currentColor 14%, transparent);
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-/* Оттенок совпадает с цветом бейджа этой же сущности в графе — глаз связывает
-   панель с тем, по чему кликнул, без чтения заголовка. */
-.gs-details__kind--commit {
+/* Оттенок шапки совпадает с цветом бейджа этой же сущности в графе — глаз
+   связывает панель с тем, по чему кликнул, без чтения заголовка. */
+.gs-details__head--commit {
   color: var(--gs-fg-muted);
 }
-.gs-details__kind--branch {
+.gs-details__head--branch {
   color: var(--gs-added-fg);
 }
-.gs-details__kind--current {
+.gs-details__head--current {
   color: var(--gs-accent);
 }
-.gs-details__kind--remote {
+.gs-details__head--remote {
   color: var(--gs-renamed-fg);
 }
-.gs-details__kind--tag {
+.gs-details__head--tag {
   color: var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
 }
-.gs-details__kind--stash {
+.gs-details__head--stash {
   color: var(--gs-fg-muted);
 }
 
 .gs-details__subject {
-  margin: calc(-1 * var(--gs-space-2)) 0 0;
+  margin: 0;
   overflow-wrap: break-word;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.gs-details__subject--mono {
-  font-family: var(--gs-font-code);
-  font-size: 15px;
-}
-
-/* --- автор --- */
-
-.gs-details__person {
-  display: flex;
-  align-items: center;
-  gap: var(--gs-space-3);
-  padding: var(--gs-space-3);
-  border-radius: var(--gs-radius-md);
-  background: color-mix(in srgb, var(--gs-fg-muted) 8%, transparent);
-}
-
-.gs-details__person-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.gs-details__person-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
-}
-
-.gs-details__person-when {
-  color: var(--gs-fg-muted);
-  font-size: 11px;
   line-height: 1.4;
 }
 
-/* --- секции --- */
+/* --- пары «поле — значение» --- */
 
-.gs-details__section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gs-space-2);
-}
-
-.gs-details__section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--gs-space-2);
-  min-height: 18px;
-}
-
-.gs-details__section-title {
+.gs-details__meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
   margin: 0;
+}
+
+.gs-details__label {
   color: var(--gs-fg-muted);
-  font-size: 10px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
+  font-size: 11px;
 }
 
-.gs-details__text {
-  margin: 0;
-  overflow-wrap: break-word;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.gs-details__text--mono {
-  font-family: var(--gs-font-code);
+.gs-details__value {
+  margin: 0 0 var(--gs-space-2);
+  overflow-wrap: anywhere;
   font-size: 12px;
+}
+
+.gs-details__value--mono {
+  font-family: var(--gs-font-code);
+}
+
+/* Абсолютная дата — подпись под относительной: «когда именно» нужно реже,
+   чем «давно ли», но искать его в тултипе неудобно. */
+.gs-details__value-note {
+  display: block;
+  color: var(--gs-fg-muted);
+  font-size: 11px;
 }
 
 .gs-details__note {
@@ -135,77 +93,75 @@
   font-size: 12px;
 }
 
-/* --- sha --- */
+/* --- sha и копирование --- */
 
-.gs-details__sha {
-  padding: var(--gs-space-2) var(--gs-space-3);
-  border: 1px solid var(--gs-border);
-  border-radius: var(--gs-radius-md);
-  background: var(--gs-bg);
+.gs-details__sha-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gs-space-2);
 }
 
-.gs-details__sha-value {
-  display: block;
-  width: 100%;
+.gs-details__sha-link {
+  min-width: 0;
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--gs-fg);
+  color: var(--gs-accent);
   font-family: var(--gs-font-code);
-  font-size: 11px;
-  line-height: 1.6;
+  font-size: 12px;
   text-align: left;
-  /* Хеш — единственное место, где перенос по любому символу уместен: он всё
-     равно читается по первым знакам, а переносить его по словам нечем. */
   overflow-wrap: anywhere;
 }
 
-.gs-details__sha-value--link {
-  color: var(--gs-accent);
-  cursor: pointer;
-}
-
-.gs-details__sha-value--link:hover {
+.gs-details__sha-link:hover {
   text-decoration: underline;
 }
 
 .gs-details__copy {
-  display: inline-flex;
   flex: none;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
-  border: 1px solid transparent;
+  padding: 0 4px;
+  border: none;
   border-radius: var(--gs-radius-sm);
   background: transparent;
   color: var(--gs-fg-muted);
   font-size: 11px;
-  transition: background 80ms ease, color 80ms ease, border-color 80ms ease;
 }
 
 .gs-details__copy:hover {
-  border-color: var(--gs-border);
   background: var(--gs-bg-hover);
   color: var(--gs-fg);
 }
 
-.gs-details__copy--done {
-  color: var(--gs-added-fg);
+/* --- секции --- */
+
+.gs-details__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: var(--gs-space-2);
+  border-top: 1px solid color-mix(in srgb, var(--gs-border) 70%, transparent);
 }
 
-/* --- чипы --- */
+.gs-details__section-title {
+  margin: 0;
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 
 .gs-details__chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--gs-space-1);
 }
 
 .gs-details__chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
+  gap: 4px;
+  padding: 2px 7px;
   border: 1px solid var(--gs-border);
   border-radius: var(--gs-radius-lg);
   background: var(--gs-bg);
@@ -218,50 +174,4 @@
 .gs-details__chip:hover {
   border-color: var(--gs-accent);
   background: var(--gs-bg-hover);
-}
-
-/* --- пустое состояние --- */
-
-.gs-details__placeholder {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: var(--gs-space-4);
-  color: var(--gs-fg-muted);
-  text-align: center;
-}
-
-.gs-details__placeholder-title {
-  margin: var(--gs-space-2) 0 0;
-  color: var(--gs-fg);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.gs-details__placeholder-text {
-  max-width: 30ch;
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.gs-details__placeholder-hint {
-  margin: var(--gs-space-2) 0 0;
-  font-size: 11px;
-}
-
-.gs-details__placeholder kbd {
-  display: inline-block;
-  min-width: 17px;
-  padding: 1px 4px;
-  border: 1px solid var(--gs-border);
-  border-bottom-width: 2px;
-  border-radius: var(--gs-radius-sm);
-  background: var(--gs-bg-raised);
-  font-family: var(--gs-font-code);
-  font-size: 10px;
-  line-height: 1.4;
 }

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GraphEntity, GraphNode } from '@shared/graph/model';
 import { formatAbsoluteTime, formatRelativeTime } from '@shared/time';
+import { EmptyState } from '../../components/EmptyState';
 import { Icon, type IconName } from '../../components/Icon';
-import { Avatar } from './Avatar';
 import { badgeAppearance, RefBadge, type BadgeEntity } from './RefBadge';
 import './DetailsPanel.css';
 
@@ -25,16 +25,10 @@ export function DetailsPanel({ entity, node, width, onJumpToSha, onSelect }: Det
           <Decorations entity={entity} node={node} onSelect={onSelect} />
         </>
       ) : (
-        <div className="gs-details__placeholder">
-          <Icon name="commit" size={22} />
-          <p className="gs-details__placeholder-title">Ничего не выбрано</p>
-          <p className="gs-details__placeholder-text">
-            Выберите коммит, ветку, тег или стеш — здесь появятся подробности.
-          </p>
-          <p className="gs-details__placeholder-hint">
-            По графу можно ходить клавишами <kbd>↑</kbd> <kbd>↓</kbd>
-          </p>
-        </div>
+        <EmptyState
+          title="Ничего не выбрано"
+          description="Выберите коммит, ветку, тег или стеш — здесь появятся подробности. По графу можно ходить стрелками ↑ и ↓."
+        />
       )}
     </aside>
   );
@@ -46,23 +40,15 @@ function renderEntity(entity: GraphEntity, onJumpToSha: (sha: string) => void) {
       const { commit } = entity;
       return (
         <>
-          <Kind icon="commit" tone="commit" label={commit.parents.length > 1 ? 'Merge-коммит' : 'Коммит'} />
-          <h2 className="gs-details__subject">{commit.subject}</h2>
-
-          <div className="gs-details__person">
-            <Avatar name={commit.authorName} size={34} />
-            <div className="gs-details__person-text">
-              <span className="gs-details__person-name">{commit.authorName}</span>
-              <span className="gs-details__person-when" title={formatAbsoluteTime(commit.authoredAt)}>
-                {formatRelativeTime(commit.authoredAt)} · {formatAbsoluteTime(commit.authoredAt)}
-              </span>
-            </div>
-          </div>
-
-          <ShaSection title="Идентификатор" sha={commit.sha} />
-
-          <Section title={commit.parents.length === 1 ? 'Родитель' : 'Родители'}>
-            {commit.parents.length > 0 ? (
+          <Header icon="commit" tone="commit" title={commit.parents.length > 1 ? 'Merge-коммит' : 'Коммит'} />
+          <Subject text={commit.subject} />
+          <dl className="gs-details__meta">
+            <ShaField label="SHA" sha={commit.sha} />
+            <Field label="Автор" value={commit.authorName} />
+            <DateField value={commit.authoredAt} />
+          </dl>
+          {commit.parents.length > 0 ? (
+            <Section title={commit.parents.length === 1 ? 'Родитель' : 'Родители'}>
               <div className="gs-details__chips">
                 {commit.parents.map((sha) => (
                   <button
@@ -77,10 +63,10 @@ function renderEntity(entity: GraphEntity, onJumpToSha: (sha: string) => void) {
                   </button>
                 ))}
               </div>
-            ) : (
-              <p className="gs-details__note">Корневой коммит — родителей нет.</p>
-            )}
-          </Section>
+            </Section>
+          ) : (
+            <p className="gs-details__note">Корневой коммит — родителей нет.</p>
+          )}
         </>
       );
     }
@@ -90,32 +76,18 @@ function renderEntity(entity: GraphEntity, onJumpToSha: (sha: string) => void) {
       const remote = ref.kind === 'remote';
       return (
         <>
-          <Kind
+          <Header
             icon={remote ? 'remote' : 'branch'}
             tone={ref.isCurrent ? 'current' : remote ? 'remote' : 'branch'}
-            label={ref.isCurrent ? 'Текущая ветка' : remote ? 'Ветка с сервера' : 'Локальная ветка'}
+            title={ref.isCurrent ? 'Текущая ветка' : remote ? 'Ветка с сервера' : 'Локальная ветка'}
           />
-          <h2 className="gs-details__subject gs-details__subject--mono">{ref.name}</h2>
-
-          {ref.authorName !== undefined ? (
-            <div className="gs-details__person">
-              <Avatar name={ref.authorName} size={34} />
-              <div className="gs-details__person-text">
-                <span className="gs-details__person-name">{ref.authorName}</span>
-                {ref.authoredAt !== undefined ? (
-                  <span className="gs-details__person-when">{formatRelativeTime(ref.authoredAt)}</span>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-
-          {ref.subject !== undefined ? (
-            <Section title="Последний коммит">
-              <p className="gs-details__text">{ref.subject}</p>
-            </Section>
-          ) : null}
-
-          <ShaSection title="Указывает на" sha={ref.sha} onJumpToSha={onJumpToSha} />
+          <Subject text={ref.name} />
+          <dl className="gs-details__meta">
+            {ref.subject !== undefined ? <Field label="Последний коммит" value={ref.subject} /> : null}
+            {ref.authorName !== undefined ? <Field label="Автор" value={ref.authorName} /> : null}
+            {ref.authoredAt !== undefined ? <DateField value={ref.authoredAt} /> : null}
+            <ShaField label="Указывает на" sha={ref.sha} onJumpToSha={onJumpToSha} />
+          </dl>
         </>
       );
     }
@@ -124,30 +96,15 @@ function renderEntity(entity: GraphEntity, onJumpToSha: (sha: string) => void) {
       const { ref } = entity;
       return (
         <>
-          <Kind icon="tag" tone="tag" label="Тег" />
-          <h2 className="gs-details__subject gs-details__subject--mono">{ref.name}</h2>
-
-          {ref.authorName !== undefined ? (
-            <div className="gs-details__person">
-              <Avatar name={ref.authorName} size={34} />
-              <div className="gs-details__person-text">
-                <span className="gs-details__person-name">{ref.authorName}</span>
-                {ref.authoredAt !== undefined ? (
-                  <span className="gs-details__person-when">{formatRelativeTime(ref.authoredAt)}</span>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-
-          <Section title="Сообщение">
-            {ref.subject !== undefined ? (
-              <p className="gs-details__text">{ref.subject}</p>
-            ) : (
-              <p className="gs-details__note">Лёгкий тег — без сообщения.</p>
-            )}
-          </Section>
-
-          <ShaSection title="Указывает на" sha={ref.sha} onJumpToSha={onJumpToSha} />
+          <Header icon="tag" tone="tag" title="Тег" />
+          <Subject text={ref.name} />
+          <dl className="gs-details__meta">
+            {ref.subject !== undefined ? <Field label="Сообщение" value={ref.subject} /> : null}
+            {ref.authorName !== undefined ? <Field label="Автор" value={ref.authorName} /> : null}
+            {ref.authoredAt !== undefined ? <DateField value={ref.authoredAt} /> : null}
+            <ShaField label="Указывает на" sha={ref.sha} onJumpToSha={onJumpToSha} />
+          </dl>
+          {ref.subject === undefined ? <p className="gs-details__note">Лёгкий тег — без сообщения.</p> : null}
         </>
       );
     }
@@ -156,26 +113,16 @@ function renderEntity(entity: GraphEntity, onJumpToSha: (sha: string) => void) {
       const { stash } = entity;
       return (
         <>
-          <Kind icon="stash" tone="stash" label="Стеш" />
-          <h2 className="gs-details__subject">{stash.message}</h2>
-
-          <div className="gs-details__person">
-            <Avatar name={stash.authorName} size={34} />
-            <div className="gs-details__person-text">
-              <span className="gs-details__person-name">{stash.authorName}</span>
-              <span className="gs-details__person-when" title={formatAbsoluteTime(stash.authoredAt)}>
-                {formatRelativeTime(stash.authoredAt)}
-              </span>
-            </div>
-          </div>
-
-          <Section title="Ссылка">
-            <p className="gs-details__text gs-details__text--mono">{stash.ref}</p>
-          </Section>
-
-          {stash.baseSha !== undefined ? (
-            <ShaSection title="Сделан поверх" sha={stash.baseSha} onJumpToSha={onJumpToSha} />
-          ) : null}
+          <Header icon="stash" tone="stash" title="Стеш" />
+          <Subject text={stash.message} />
+          <dl className="gs-details__meta">
+            <Field label="Ссылка" value={stash.ref} mono />
+            <Field label="Автор" value={stash.authorName} />
+            <DateField value={stash.authoredAt} />
+            {stash.baseSha !== undefined ? (
+              <ShaField label="Сделан поверх" sha={stash.baseSha} onJumpToSha={onJumpToSha} />
+            ) : null}
+          </dl>
         </>
       );
     }
@@ -237,48 +184,56 @@ function isSameEntity(badge: BadgeEntity, entity: GraphEntity): boolean {
     : false;
 }
 
-function Kind({ icon, tone, label }: { readonly icon: IconName; readonly tone: string; readonly label: string }) {
+function Header({ icon, tone, title }: { readonly icon: IconName; readonly tone: string; readonly title: string }) {
   return (
-    <div className={`gs-details__kind gs-details__kind--${tone}`}>
-      <Icon name={icon} size={12} />
-      <span>{label}</span>
+    <div className={`gs-details__head gs-details__head--${tone}`}>
+      <Icon name={icon} size={13} />
+      <span>{title}</span>
     </div>
   );
 }
 
-function Section({
-  title,
-  action,
-  children,
-}: {
-  readonly title: string;
-  readonly action?: React.ReactNode;
-  readonly children: React.ReactNode;
-}) {
+function Subject({ text }: { readonly text: string }) {
+  return <p className="gs-details__subject">{text}</p>;
+}
+
+function Section({ title, children }: { readonly title: string; readonly children: React.ReactNode }) {
   return (
     <section className="gs-details__section">
-      <div className="gs-details__section-head">
-        <h3 className="gs-details__section-title">{title}</h3>
-        {action}
-      </div>
+      <h3 className="gs-details__section-title">{title}</h3>
       {children}
     </section>
   );
 }
 
-/**
- * SHA целиком плюс копирование — самое частое действие над коммитом.
- *
- * Кнопка копирования вынесена в заголовок секции, а не поставлена рядом со
- * значением: сорок символов хеша занимают всю ширину панели, и кнопка сбоку
- * ломала бы их на неровные строки.
- */
-function ShaSection({
-  title,
+function Field({ label, value, mono = false }: { readonly label: string; readonly value: string; readonly mono?: boolean }) {
+  return (
+    <>
+      <dt className="gs-details__label">{label}</dt>
+      <dd className={`gs-details__value${mono ? ' gs-details__value--mono' : ''}`}>{value}</dd>
+    </>
+  );
+}
+
+function DateField({ value }: { readonly value: string }) {
+  return (
+    <>
+      <dt className="gs-details__label">Дата</dt>
+      <dd className="gs-details__value">
+        {formatRelativeTime(value)}
+        <span className="gs-details__value-note">{formatAbsoluteTime(value)}</span>
+      </dd>
+    </>
+  );
+}
+
+/** SHA с кнопкой копирования — самое частое действие над коммитом. */
+function ShaField({
+  label,
   sha,
   onJumpToSha,
 }: {
-  readonly title: string;
+  readonly label: string;
   readonly sha: string;
   readonly onJumpToSha?: (sha: string) => void;
 }) {
@@ -298,35 +253,27 @@ function ShaSection({
     }
   };
 
-  const copyButton = (
-    <button
-      type="button"
-      className={`gs-details__copy${copied ? ' gs-details__copy--done' : ''}`}
-      title="Скопировать SHA"
-      aria-label={copied ? 'SHA скопирован' : 'Скопировать SHA'}
-      onClick={copy}
-    >
-      <Icon name={copied ? 'check' : 'copy'} size={11} />
-      {copied ? 'Скопировано' : 'Копировать'}
-    </button>
-  );
-
   return (
-    <Section title={title} action={copyButton}>
-      <div className="gs-details__sha">
+    <>
+      <dt className="gs-details__label">{label}</dt>
+      <dd className="gs-details__value gs-details__sha-row">
         {onJumpToSha ? (
-          <button
-            type="button"
-            className="gs-details__sha-value gs-details__sha-value--link"
-            title="Показать этот коммит"
-            onClick={() => onJumpToSha(sha)}
-          >
+          <button type="button" className="gs-details__sha-link" title="Показать этот коммит" onClick={() => onJumpToSha(sha)}>
             {sha}
           </button>
         ) : (
-          <span className="gs-details__sha-value">{sha}</span>
+          <span className="gs-details__value--mono">{sha}</span>
         )}
-      </div>
-    </Section>
+        <button
+          type="button"
+          className="gs-details__copy"
+          title="Скопировать SHA"
+          aria-label={copied ? 'SHA скопирован' : 'Скопировать SHA'}
+          onClick={copy}
+        >
+          {copied ? 'скопировано' : 'копировать'}
+        </button>
+      </dd>
+    </>
   );
 }
