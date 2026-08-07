@@ -1,0 +1,13 @@
+.gs-avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  /* Белый поверх любого оттенка палитры: светлота фиксирована в avatar.ts. */
+  color: #fff;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  user-select: none;
+}

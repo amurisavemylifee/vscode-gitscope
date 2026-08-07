@@ -18,7 +18,9 @@ interface GraphCanvasProps {
 /** Сколько строк до конца списка начинаем подгружать следующую порцию истории. */
 const LOAD_MORE_THRESHOLD = 20;
 /** Предел ширины области дорожек: за ним граф съедает место у тем коммитов. */
-const MAX_LANE_AREA = 220;
+const MAX_LANE_AREA = 260;
+/** Минимум — чтобы на линейной истории колонка сообщений не начиналась вплотную к дорожке. */
+const MIN_LANE_AREA = 44;
 
 /**
  * Все коммиты одним виртуализированным списком — на большом графе их могут быть
@@ -71,44 +73,60 @@ export function GraphCanvas({ nodes, selectedSha, hasMore, loading, onSelect, on
     [nodes, selectedIndex, onSelect, virtualizer],
   );
 
+  const laneArea = Math.min(MAX_LANE_AREA, Math.max(MIN_LANE_AREA, laneCount * LANE_WIDTH));
+
   return (
-    <div
-      className="gs-gcanvas"
-      ref={scrollRef}
-      role="listbox"
-      aria-label="Коммиты"
-      aria-activedescendant={selectedIndex >= 0 ? rowId(selectedSha) : undefined}
-      tabIndex={0}
-      onKeyDown={onKeyDown}
-      style={{ '--gs-lane-area': `${Math.min(MAX_LANE_AREA, laneCount * LANE_WIDTH)}px` } as React.CSSProperties}
-    >
-      <div className="gs-gcanvas__list" style={{ height: `${virtualizer.getTotalSize()}px` }}>
-        {items.map((item) => {
-          const node = nodes[item.index];
-          const lanes = rowLanes[item.index];
-          if (!node || !lanes) {
-            return null;
-          }
-          return (
-            <div
-              key={item.key}
-              id={rowId(node.commit.sha)}
-              className="gs-gcanvas__row"
-              style={{ height: `${item.size}px`, transform: `translateY(${item.start}px)` }}
-            >
-              <GraphRow
-                node={node}
-                rowLanes={lanes}
-                laneCount={laneCount}
-                selected={node.commit.sha === selectedSha}
-                onSelect={onSelect}
-              />
-            </div>
-          );
-        })}
+    <div className="gs-gcanvas-wrap" style={{ '--gs-lane-area': `${laneArea}px` } as React.CSSProperties}>
+      <div className="gs-gcanvas__head gs-grid" role="presentation">
+        <span>Граф</span>
+        <span>Коммит</span>
+        <span>Автор</span>
+        <span>Когда</span>
+        <span className="gs-gcanvas__head-sha">SHA</span>
       </div>
 
-      {hasMore && loading ? <div className="gs-gcanvas__more">Загружаем историю…</div> : null}
+      <div
+        className="gs-gcanvas"
+        ref={scrollRef}
+        role="listbox"
+        aria-label="Коммиты"
+        aria-activedescendant={selectedIndex >= 0 ? rowId(selectedSha) : undefined}
+        tabIndex={0}
+        onKeyDown={onKeyDown}
+      >
+        <div className="gs-gcanvas__list" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+          {items.map((item) => {
+            const node = nodes[item.index];
+            const lanes = rowLanes[item.index];
+            if (!node || !lanes) {
+              return null;
+            }
+            return (
+              <div
+                key={item.key}
+                id={rowId(node.commit.sha)}
+                className="gs-gcanvas__row"
+                style={{ height: `${item.size}px`, transform: `translateY(${item.start}px)` }}
+              >
+                <GraphRow
+                  node={node}
+                  rowLanes={lanes}
+                  laneCount={laneCount}
+                  selected={node.commit.sha === selectedSha}
+                  onSelect={onSelect}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        {hasMore && loading ? (
+          <div className="gs-gcanvas__more">
+            <span className="gs-gcanvas__spinner" aria-hidden="true" />
+            Загружаем историю…
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

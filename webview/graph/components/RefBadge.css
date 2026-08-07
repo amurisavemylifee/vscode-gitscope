@@ -2,21 +2,22 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 4px;
-  max-width: 18ch;
-  padding: 0 7px 0 5px;
-  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  gap: 5px;
+  max-width: 20ch;
+  padding: 0 9px 0 7px;
+  border: 1px solid color-mix(in srgb, currentColor 38%, transparent);
   border-radius: var(--gs-radius-lg);
-  background: color-mix(in srgb, currentColor 13%, transparent);
+  background: color-mix(in srgb, currentColor 15%, transparent);
   color: var(--gs-fg-muted);
   font-size: 11px;
-  line-height: 17px;
+  font-weight: 500;
+  line-height: 19px;
   transition: background 80ms ease, border-color 80ms ease;
 }
 
 .gs-ref-badge:hover {
   border-color: currentColor;
-  background: color-mix(in srgb, currentColor 22%, transparent);
+  background: color-mix(in srgb, currentColor 26%, transparent);
 }
 
 .gs-ref-badge__label {

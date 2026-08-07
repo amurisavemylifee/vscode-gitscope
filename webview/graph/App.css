@@ -48,9 +48,9 @@
   display: flex;
   flex: none;
   align-items: center;
-  gap: var(--gs-space-2);
-  min-height: 34px;
-  padding: var(--gs-space-2) var(--gs-space-3);
+  gap: var(--gs-space-3);
+  min-height: 44px;
+  padding: 0 var(--gs-space-4);
   border-bottom: 1px solid var(--gs-border);
   background: var(--gs-bg-raised);
 }
@@ -58,9 +58,10 @@
 .gs-gheader__repo {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--gs-space-2);
   min-width: 0;
   overflow: hidden;
+  font-size: 14px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -68,14 +69,14 @@
 
 .gs-gheader__repo-icon {
   flex: none;
-  color: var(--gs-fg-muted);
+  color: var(--gs-accent);
 }
 
 .gs-gheader__count {
   flex: none;
-  padding: 1px 7px;
+  padding: 2px 9px;
   border-radius: var(--gs-radius-lg);
-  background: color-mix(in srgb, var(--gs-fg-muted) 14%, transparent);
+  background: color-mix(in srgb, var(--gs-fg-muted) 15%, transparent);
   color: var(--gs-fg-muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
@@ -92,7 +93,8 @@
 }
 
 .gs-gheader__filter-button {
-  max-width: 26ch;
+  max-width: 28ch;
+  padding: 5px 10px;
   overflow: hidden;
   white-space: nowrap;
   font-size: 12px;
@@ -105,13 +107,13 @@
 
 .gs-gheader__popover {
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 6px);
   right: 0;
   z-index: 10;
   border: 1px solid var(--gs-border);
-  border-radius: var(--gs-radius-md);
+  border-radius: var(--gs-radius-lg);
   background: var(--gs-bg-raised);
-  box-shadow: 0 6px 20px color-mix(in srgb, black 34%, transparent);
+  box-shadow: 0 10px 32px color-mix(in srgb, black 40%, transparent);
 }
 
 .gs-gheader__icon-button {
@@ -119,8 +121,8 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 24px;
+  width: 30px;
+  height: 28px;
   border: none;
   border-radius: var(--gs-radius-sm);
   background: transparent;

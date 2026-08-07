@@ -1,19 +1,10 @@
-/*
- * Колонки одинаковы во всех строках, поэтому автор, дата и sha выстраиваются в
- * ровные столбцы по всему графу. Ширина области дорожек приходит переменной от
- * канвы: она зависит от того, сколько дорожек в этом конкретном графе.
- */
 .gs-grow {
-  display: grid;
-  grid-template-columns: var(--gs-lane-area, 60px) minmax(0, 1fr) 12ch 14ch 8ch;
   align-items: center;
-  gap: var(--gs-space-2);
   height: 100%;
-  padding-right: var(--gs-space-3);
   /* Полоса выделения рисуется вставной тенью, а не border: иначе появление
      выделения сдвигало бы содержимое строки на пиксель. */
-  box-shadow: inset 2px 0 0 transparent;
-  transition: background 80ms ease, box-shadow 80ms ease;
+  box-shadow: inset 3px 0 0 transparent;
+  transition: background 90ms ease, box-shadow 90ms ease;
   cursor: default;
 }
 
@@ -21,9 +12,10 @@
   background: var(--gs-bg-hover);
 }
 
-.gs-grow--selected {
+.gs-grow--selected,
+.gs-grow--selected:hover {
   background: var(--gs-bg-active);
-  box-shadow: inset 2px 0 0 var(--gs-focus);
+  box-shadow: inset 3px 0 0 var(--gs-focus);
   color: var(--vscode-list-activeSelectionForeground, var(--gs-fg));
 }
 
@@ -38,7 +30,7 @@
 .gs-grow__lanes path {
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.75;
+  stroke-width: 2.25;
   stroke-linecap: round;
 }
 
@@ -46,36 +38,34 @@
   fill: currentColor;
   /* Обводка цветом фона отделяет точку от линий, проходящих под ней. */
   stroke: var(--gs-bg);
-  stroke-width: 1.5;
+  stroke-width: 2;
 }
 
 /* Merge-коммит — кольцо: слияния видно в потоке истории без чтения текста. */
 .gs-grow__dot--merge {
   fill: var(--gs-bg);
   stroke: currentColor;
-  stroke-width: 2.5;
+  stroke-width: 3;
 }
 
+/* На выделенной строке и «halo» обычной точки, и заливка кольца merge должны
+   брать цвет выделения: иначе точка читается как тёмная дыра в синей полосе. */
 .gs-grow--selected .gs-grow__dot {
-  stroke: var(--gs-bg-raised);
+  stroke: var(--gs-bg-active);
 }
 
-/* --- содержимое --- */
+.gs-grow--selected .gs-grow__dot--merge {
+  fill: var(--gs-bg-active);
+  stroke: currentColor;
+}
 
-.gs-grow__main {
+/* --- сообщение коммита --- */
+
+.gs-grow__message {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--gs-space-2);
   min-width: 0;
-}
-
-.gs-grow__badges {
-  display: inline-flex;
-  flex: 0 1 auto;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  overflow: hidden;
 }
 
 .gs-grow__subject {
@@ -84,27 +74,48 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
-.gs-grow__author,
-.gs-grow__date,
-.gs-grow__sha {
+/* --- автор, дата, sha --- */
+
+.gs-grow__author {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-2);
+  min-width: 0;
+}
+
+.gs-grow__author-name {
   overflow: hidden;
   color: var(--gs-fg-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .gs-grow__date {
+  overflow: hidden;
+  color: var(--gs-fg-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
-  text-align: right;
 }
 
 .gs-grow__sha {
+  color: var(--gs-fg-muted);
   font-family: var(--gs-font-code);
+  font-size: 12px;
   text-align: right;
+}
+
+.gs-grow--selected .gs-grow__author-name,
+.gs-grow--selected .gs-grow__date,
+.gs-grow--selected .gs-grow__sha {
+  color: inherit;
+  opacity: 0.85;
 }
 
 /*

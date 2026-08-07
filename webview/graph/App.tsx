@@ -16,14 +16,14 @@ interface StoredLayout {
   readonly detailsWidth: number;
 }
 
-const MIN_DETAILS_WIDTH = 220;
-const MAX_DETAILS_WIDTH = 480;
+const MIN_DETAILS_WIDTH = 260;
+const MAX_DETAILS_WIDTH = 520;
 
 export function App() {
   const { ready, snapshot, error, loading } = useGraphState();
 
   const stored = useRef(persistedState.read<StoredLayout>()).current;
-  const [detailsWidth, setDetailsWidth] = useState(stored.detailsWidth ?? 300);
+  const [detailsWidth, setDetailsWidth] = useState(stored.detailsWidth ?? 340);
   const [selectedEntity, setSelectedEntity] = useState<GraphEntity | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
 

@@ -24,7 +24,9 @@ export type IconName =
   | 'columns'
   | 'rows'
   | 'warning'
-  | 'search';
+  | 'search'
+  | 'copy'
+  | 'check';
 
 const PATHS: Record<IconName, string> = {
   branch: 'M6 3v12M6 21a3 3 0 100-6 3 3 0 000 6zM6 6a3 3 0 100-6 3 3 0 000 6zM18 9a3 3 0 100-6 3 3 0 000 6zM18 9v1a4 4 0 01-4 4h-4',
@@ -45,6 +47,8 @@ const PATHS: Record<IconName, string> = {
   rows: 'M4 3h16a1 1 0 011 1v16a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1zM3 12h18',
   warning: 'M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01',
   search: 'M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35',
+  copy: 'M9 9h10a2 2 0 012 2v10a2 2 0 01-2 2H9a2 2 0 01-2-2V11a2 2 0 012-2zM5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1',
+  check: 'M20 6L9 17l-5-5',
 };
 
 interface IconProps {

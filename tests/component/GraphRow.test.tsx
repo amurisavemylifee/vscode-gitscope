@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { GraphEntity, GraphNode } from '@shared/graph/model';
-import { GraphRow } from '../../webview/graph/components/GraphRow';
+import { GraphRow, ROW_HEIGHT } from '../../webview/graph/components/GraphRow';
 import type { RowLanes } from '../../webview/graph/lanes';
 
 const node = (overrides: Partial<GraphNode> = {}): GraphNode => ({
@@ -33,6 +33,20 @@ describe('GraphRow', () => {
     expect(screen.getByText('aaaaaaa')).toBeInTheDocument();
     expect(screen.getByText('Первый коммит')).toBeInTheDocument();
     expect(screen.getByText('Тарас')).toBeInTheDocument();
+  });
+
+  it('рисует аватар автора с его инициалами', () => {
+    const { container } = render(
+      <GraphRow
+        node={node({ commit: { ...node().commit, authorName: 'Тарас Шашурин' } })}
+        rowLanes={rowLanes}
+        laneCount={1}
+        selected={false}
+        onSelect={() => undefined}
+      />,
+    );
+
+    expect(container.querySelector('.gs-avatar')).toHaveTextContent('ТШ');
   });
 
   it('клик по строке выбирает коммит', async () => {
@@ -186,8 +200,8 @@ describe('GraphRow', () => {
     expect(lines).toHaveLength(2);
     // top — от верха до середины строки, through — на всю её высоту.
     expect(lines[0]).toHaveAttribute('y1', '0');
-    expect(lines[0]).toHaveAttribute('y2', '15');
+    expect(lines[0]).toHaveAttribute('y2', String(ROW_HEIGHT / 2));
     expect(lines[1]).toHaveAttribute('y1', '0');
-    expect(lines[1]).toHaveAttribute('y2', '30');
+    expect(lines[1]).toHaveAttribute('y2', String(ROW_HEIGHT));
   });
 });

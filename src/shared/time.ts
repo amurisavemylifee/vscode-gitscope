@@ -36,9 +36,11 @@ export function formatAbsoluteTime(value: number | string): string {
   if (!Number.isFinite(timestamp)) {
     return '';
   }
-  return new Date(timestamp).toLocaleString(undefined, {
+  // Локаль задана явно: интерфейс расширения русский, а локаль webview зависит от
+  // сборки редактора — иначе рядом с «2 дня назад» оказывалось бы «August 8, 2026».
+  return new Date(timestamp).toLocaleString('ru-RU', {
     year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',

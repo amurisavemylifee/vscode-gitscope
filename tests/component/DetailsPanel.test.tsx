@@ -55,11 +55,13 @@ const renderPanel = (
 describe('DetailsPanel', () => {
   beforeEach(() => writeText.mockClear());
 
-  it('без выбора подсказывает, что делать, включая навигацию стрелками', () => {
+  it('без выбора подсказывает, что делать, включая навигацию клавишами', () => {
     renderPanel(null);
 
     expect(screen.getByText('Ничего не выбрано')).toBeInTheDocument();
-    expect(screen.getByText(/стрелками/)).toBeInTheDocument();
+    expect(screen.getByText(/По графу можно ходить клавишами/)).toBeInTheDocument();
+    expect(screen.getByText('↑')).toBeInTheDocument();
+    expect(screen.getByText('↓')).toBeInTheDocument();
   });
 
   it('коммит: показывает полный sha, автора и кнопки родителей', async () => {
