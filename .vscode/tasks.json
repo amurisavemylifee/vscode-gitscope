@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "watch:ext",
+      "type": "npm",
+      "script": "dev:ext",
+      "isBackground": true,
+      "presentation": { "group": "watch", "reveal": "never" },
+      "problemMatcher": {
+        "owner": "esbuild",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^✘ (.+):(\\d+) (.+)$",
+          "file": 1,
+          "line": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^\\[esbuild\\] сборка…$",
+          "endsPattern": "^\\[esbuild\\] (готово|сборка упала)"
+        }
+      }
+    },
+    {
+      "label": "watch:webview",
+      "type": "npm",
+      "script": "dev:webview",
+      "isBackground": true,
+      "presentation": { "group": "watch", "reveal": "never" },
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": "^(.*)$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "building for production",
+          "endsPattern": "built in"
+        }
+      }
+    },
+    {
+      "label": "watch",
+      "dependsOn": ["watch:ext", "watch:webview"],
+      "dependsOrder": "parallel",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    }
+  ]
+}

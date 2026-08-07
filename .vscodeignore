@@ -1,0 +1,16 @@
+# В .vsix едет только собранный dist — исходники и тесты не нужны.
+.vscode/**
+.vscode-test/**
+src/**
+webview/**
+tests/**
+node_modules/**
+coverage/**
+**/*.map
+**/tsconfig*.json
+esbuild.config.mjs
+vite.config.ts
+vitest.config.ts
+eslint.config.mjs
+.vscode-test.mjs
+pnpm-lock.yaml

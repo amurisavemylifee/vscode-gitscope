@@ -1,0 +1,6 @@
+# Единственное, чему действительно нужен postinstall, — esbuild (распаковка бинаря).
+# Остальные два относятся к публикации в маркетплейс и здесь не используются.
+allowBuilds:
+  '@vscode/vsce-sign': false
+  esbuild: true
+  keytar: false

@@ -1,0 +1,113 @@
+{
+  "name": "gitscope",
+  "displayName": "GitScope",
+  "description": "Сравнение состояний кода в любых двух точках истории git — как «Files changed» в pull request",
+  "version": "0.1.0",
+  "publisher": "amurisavemylifee",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "vscode": "^1.95.0",
+    "node": ">=20"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "keywords": [
+    "git",
+    "diff",
+    "compare",
+    "branch",
+    "review"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onWebviewPanel:gitscope.compare"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "gitscope.compareRevisions",
+        "title": "Сравнить ревизии…",
+        "category": "GitScope",
+        "icon": "$(git-compare)"
+      }
+    ],
+    "configuration": {
+      "title": "GitScope",
+      "properties": {
+        "gitscope.diff.contextLines": {
+          "type": "number",
+          "default": 3,
+          "minimum": 0,
+          "maximum": 50,
+          "description": "Сколько строк контекста показывать вокруг изменений."
+        },
+        "gitscope.diff.collapseFilesOverLines": {
+          "type": "number",
+          "default": 1500,
+          "minimum": 0,
+          "description": "Файлы с диффом длиннее указанного числа строк по умолчанию свёрнуты. 0 — не сворачивать."
+        },
+        "gitscope.diff.defaultViewMode": {
+          "type": "string",
+          "enum": [
+            "unified",
+            "split"
+          ],
+          "default": "unified",
+          "enumDescriptions": [
+            "Одна колонка, добавленные и удалённые строки подряд",
+            "Две колонки: слева базовая ревизия, справа сравниваемая"
+          ],
+          "description": "Режим отображения диффа при открытии панели."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "pnpm run build:ext && pnpm run build:webview",
+    "build:ext": "node esbuild.config.mjs --production",
+    "build:webview": "vite build",
+    "dev:ext": "node esbuild.config.mjs --watch",
+    "dev:webview": "vite build --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.webview.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "vscode-test",
+    "package": "pnpm run build && vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "@tanstack/react-virtual": "^3.14.9",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "shiki": "^4.4.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@types/vscode": "~1.95.0",
+    "@vitejs/plugin-react": "^6.0.5",
+    "@vitest/coverage-v8": "^4.1.10",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.8.0",
+    "jsdom": "^30.0.1",
+    "mocha": "^11.8.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.66.0",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
+  }
+}
