@@ -1,29 +1,22 @@
-.gs-diff {
-  overflow-x: auto;
+.gs-diff__line {
   font-family: var(--gs-font-code);
   font-size: var(--gs-font-size-code);
   line-height: var(--gs-line-height-code);
   tab-size: 4;
 }
 
-.gs-diff__hunk + .gs-diff__hunk {
-  border-top: 1px solid var(--gs-border);
+.gs-diff__line--insert {
+  background: var(--gs-added-line);
+}
+
+.gs-diff__line--delete {
+  background: var(--gs-removed-line);
 }
 
 .gs-diff__row {
   display: grid;
   grid-template-columns: 46px 46px 18px 1fr;
-  /* Строка шире контейнера не должна обрезаться при горизонтальной прокрутке. */
-  min-width: max-content;
   min-height: var(--gs-line-height-code);
-}
-
-.gs-diff__row--insert {
-  background: var(--gs-added-line);
-}
-
-.gs-diff__row--delete {
-  background: var(--gs-removed-line);
 }
 
 .gs-diff__row--note {
@@ -46,11 +39,11 @@
   user-select: none;
 }
 
-.gs-diff__row--insert .gs-diff__marker {
+.gs-diff__line--insert .gs-diff__marker {
   color: var(--gs-added-fg);
 }
 
-.gs-diff__row--delete .gs-diff__marker {
+.gs-diff__line--delete .gs-diff__marker {
   color: var(--gs-removed-fg);
 }
 
@@ -65,11 +58,13 @@
 .gs-diff__hunk-header {
   display: flex;
   gap: var(--gs-space-3);
-  padding: 2px 8px 2px 12px;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px 0 12px;
   background: color-mix(in srgb, var(--gs-fg-muted) 8%, transparent);
   color: var(--gs-fg-muted);
+  font-family: var(--gs-font-code);
   font-size: 11px;
-  line-height: 18px;
 }
 
 .gs-diff__hunk-range {

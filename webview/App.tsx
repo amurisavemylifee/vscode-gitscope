@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ViewMode } from '@shared/model';
 import { plural } from '@shared/time';
 import { actions } from './api/actions';
 import { persistedState } from './api/bridge';
 import { CompareHeader } from './components/CompareHeader';
+import { DiffCanvas, type ScrollTarget } from './components/DiffCanvas';
 import { EmptyState } from './components/EmptyState';
-import { FileDiff } from './components/FileDiff';
 import { FileTree } from './components/FileTree';
+import { useCodeLineHeight } from './hooks/useCodeLineHeight';
 import { usePanelState } from './hooks/usePanelState';
 import { usePatches } from './hooks/usePatches';
+import { useSyntaxTheme, useSyntaxTokens } from './hooks/useSyntaxTokens';
 import './App.css';
 
 interface StoredLayout {
@@ -25,24 +27,52 @@ export function App() {
   const stored = useRef(persistedState.read<StoredLayout>()).current;
   const [viewMode, setViewMode] = useState<ViewMode | null>(stored.viewMode ?? null);
   const [treeWidth, setTreeWidth] = useState(stored.treeWidth ?? 260);
-  const [activePath, setActivePath] = useState<string | null>(null);
 
   const comparisonKey = summary ? `${summary.base.sha}..${summary.compare.sha}` : '';
   const { patches, requestPatch } = usePatches(comparisonKey);
 
-  const fileElements = useRef(new Map<string, HTMLElement>());
-  const registerElement = useCallback((path: string, element: HTMLElement | null) => {
-    if (element) {
-      fileElements.current.set(path, element);
-    } else {
-      fileElements.current.delete(path);
-    }
+  const theme = useSyntaxTheme();
+  const tokens = useSyntaxTokens(patches, theme);
+  const lineHeight = useCodeLineHeight(theme);
+
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
+  const [activePath, setActivePath] = useState<string | null>(null);
+  const [scrollTarget, setScrollTarget] = useState<ScrollTarget | null>(null);
+
+  // Новое сравнение — старые решения о свёрнутых файлах к нему не относятся.
+  useEffect(() => {
+    setCollapsed(new Set());
+    setExpanded(new Set());
+    setScrollTarget(null);
+  }, [comparisonKey]);
+
+  const toggleCollapse = useCallback((path: string) => {
+    setCollapsed((previous) => {
+      const next = new Set(previous);
+      if (!next.delete(path)) {
+        next.add(path);
+      }
+      return next;
+    });
   }, []);
 
-  const selectFile = useCallback((path: string) => {
-    setActivePath(path);
-    fileElements.current.get(path)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  const expandLarge = useCallback((path: string) => {
+    setExpanded((previous) => new Set(previous).add(path));
   }, []);
+
+  const files = useMemo(() => summary?.files ?? [], [summary]);
+
+  const selectFile = useCallback(
+    (path: string) => {
+      const fileIndex = files.findIndex((file) => file.path === path);
+      if (fileIndex >= 0) {
+        setActivePath(path);
+        setScrollTarget({ fileIndex, nonce: Date.now() });
+      }
+    },
+    [files],
+  );
 
   const changeViewMode = useCallback((mode: ViewMode) => {
     setViewMode(mode);
@@ -54,15 +84,12 @@ export function App() {
     persistedState.write<StoredLayout>({ treeWidth: width });
   });
 
-  // Пока панель не сказала своё слово, режим берём из настроек расширения.
-  const effectiveViewMode = viewMode ?? settings.viewMode;
-
   const header = (
     <CompareHeader
       summary={summary}
       fetch={fetch}
       loading={loading}
-      viewMode={effectiveViewMode}
+      viewMode={viewMode ?? settings.viewMode}
       onViewModeChange={changeViewMode}
       onPickRevision={actions.pickRevision}
       onSwap={actions.swapRevisions}
@@ -115,7 +142,11 @@ export function App() {
           }
           action={
             loading ? undefined : (
-              <button type="button" className="gs-button gs-button--primary" onClick={() => actions.pickRevision('base')}>
+              <button
+                type="button"
+                className="gs-button gs-button--primary"
+                onClick={() => actions.pickRevision('base')}
+              >
                 Выбрать ревизии
               </button>
             )
@@ -125,7 +156,7 @@ export function App() {
     );
   }
 
-  if (summary.files.length === 0) {
+  if (files.length === 0) {
     return (
       <div className="gs-app">
         {header}
@@ -143,9 +174,10 @@ export function App() {
       <div className="gs-app__body">
         <aside className="gs-app__tree" style={{ width: `${treeWidth}px` }}>
           <div className="gs-app__tree-title">
-            {summary.files.length} {plural(summary.files.length, ['изменённый файл', 'изменённых файла', 'изменённых файлов'])}
+            {files.length}{' '}
+            {plural(files.length, ['изменённый файл', 'изменённых файла', 'изменённых файлов'])}
           </div>
-          <FileTree files={summary.files} activePath={activePath} onSelect={selectFile} />
+          <FileTree files={files} activePath={activePath} onSelect={selectFile} />
         </aside>
 
         <div
@@ -156,24 +188,26 @@ export function App() {
           onPointerDown={startResize}
         />
 
-        <main className="gs-app__files">
-          {summary.files.map((file) => (
-            <FileDiff
-              key={file.path}
-              file={file}
-              state={patches.get(file.path)}
-              collapseOverLines={settings.collapseFilesOverLines}
-              onRequest={requestPatch}
-              registerElement={registerElement}
-            />
-          ))}
-        </main>
+        <DiffCanvas
+          files={files}
+          patches={patches}
+          tokens={tokens}
+          collapsed={collapsed}
+          expanded={expanded}
+          collapseOverLines={settings.collapseFilesOverLines}
+          lineHeight={lineHeight}
+          scrollTarget={scrollTarget}
+          onToggleCollapse={toggleCollapse}
+          onExpandLarge={expandLarge}
+          onRequestPatch={requestPatch}
+          onVisibleFileChange={setActivePath}
+        />
       </div>
     </div>
   );
 }
 
-/** Перетаскивание границы между деревом и списком файлов. */
+/** Перетаскивание границы между деревом и списком изменений. */
 function useResizer(current: number, onChange: (width: number) => void) {
   const width = useRef(current);
   width.current = current;

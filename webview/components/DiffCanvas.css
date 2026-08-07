@@ -1,0 +1,154 @@
+.gs-canvas-wrapper {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.gs-canvas {
+  height: 100%;
+  overflow: auto;
+}
+
+.gs-canvas__list {
+  position: relative;
+  width: 100%;
+}
+
+.gs-canvas__row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* Строка кода может быть шире панели: тогда она растягивает область
+     прокрутки, а короткие строки всё равно занимают всю видимую ширину. */
+  min-width: 100%;
+  width: max-content;
+}
+
+/* Липкая полоса с заголовком текущего файла. Лежит поверх списка, а не внутри
+   него: внутри виртуализованного контейнера position:sticky не работает —
+   строки позиционированы абсолютно. */
+.gs-canvas__sticky {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.gs-canvas__sticky .gs-file-header {
+  pointer-events: auto;
+}
+
+/* --- заголовок файла --- */
+
+.gs-file-header {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-2);
+  height: 34px;
+  padding: 0 var(--gs-space-3) 0 4px;
+  border-top: 1px solid var(--gs-border);
+  border-bottom: 1px solid var(--gs-border);
+  background: var(--gs-bg-raised);
+}
+
+.gs-file-header--floating {
+  box-shadow: 0 2px 6px color-mix(in srgb, black 22%, transparent);
+}
+
+.gs-file-header__toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: var(--gs-radius-sm);
+  background: transparent;
+  color: var(--gs-fg-muted);
+}
+
+.gs-file-header__toggle:hover {
+  background: var(--gs-bg-hover);
+  color: var(--gs-fg);
+}
+
+.gs-file-header__path {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--gs-fg-muted);
+  font-family: var(--gs-font-code);
+  font-size: 12px;
+}
+
+.gs-file-header__previous {
+  overflow: hidden;
+  text-decoration: line-through;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.gs-file-header__name {
+  overflow: hidden;
+  color: var(--gs-fg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-file-header__meta {
+  flex: none;
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+}
+
+/* --- служебные строки --- */
+
+.gs-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-2);
+  height: 32px;
+  padding: 0 var(--gs-space-4);
+  font-size: 12px;
+}
+
+.gs-notice--muted {
+  color: var(--gs-fg-muted);
+}
+
+.gs-notice--error {
+  background: color-mix(in srgb, var(--vscode-errorForeground, #f48771) 10%, transparent);
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.gs-notice--warning {
+  background: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 12%, transparent);
+  color: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+.gs-notice__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-notice__action {
+  flex: none;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--gs-radius-sm);
+  background: transparent;
+  color: var(--gs-accent);
+  font-size: 12px;
+}
+
+.gs-notice__action:hover {
+  text-decoration: underline;
+}

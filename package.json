@@ -71,7 +71,7 @@
     "build:ext": "node esbuild.config.mjs --production",
     "build:webview": "vite build",
     "dev:ext": "node esbuild.config.mjs --watch",
-    "dev:webview": "vite build --watch",
+    "dev:webview": "vite build --watch --mode development",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.webview.json",
     "lint": "eslint .",
     "test": "vitest run",

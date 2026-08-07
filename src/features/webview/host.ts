@@ -36,7 +36,11 @@ export function buildWebviewHtml(webview: vscode.Webview, extensionUri: vscode.U
     `img-src ${webview.cspSource} data:`,
     `style-src ${webview.cspSource} 'unsafe-inline'`,
     `font-src ${webview.cspSource}`,
-    `script-src 'nonce-${nonce}'`,
+    // 'strict-dynamic' нужен для грамматик подсветки: они догружаются
+    // динамическим import(), а nonce на такие модули навесить нельзя.
+    // Доверие при этом не размывается — грузить их может только наш же
+    // стартовый скрипт, помеченный nonce.
+    `script-src 'nonce-${nonce}' 'strict-dynamic'`,
   ].join('; ');
 
   return `<!DOCTYPE html>
