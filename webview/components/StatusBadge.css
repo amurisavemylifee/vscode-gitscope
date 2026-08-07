@@ -1,0 +1,37 @@
+.gs-status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  font-family: var(--gs-font-code);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  /* Цвет буквы всегда контрастен к подложке, поэтому подложка полупрозрачная,
+     а не залитая: так значок читается и в светлой, и в тёмной теме. */
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.gs-status--added {
+  color: var(--gs-added-fg);
+}
+
+.gs-status--modified {
+  color: var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
+}
+
+.gs-status--deleted {
+  color: var(--gs-removed-fg);
+}
+
+.gs-status--renamed,
+.gs-status--copied {
+  color: var(--gs-renamed-fg);
+}
+
+.gs-status--type-changed {
+  color: var(--vscode-gitDecoration-untrackedResourceForeground, #73c991);
+}

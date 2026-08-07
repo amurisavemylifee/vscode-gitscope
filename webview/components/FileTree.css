@@ -1,0 +1,52 @@
+.gs-tree {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: auto;
+  padding: var(--gs-space-1) 0 var(--gs-space-4);
+}
+
+.gs-tree__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 8px 3px 6px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  text-align: left;
+  line-height: 18px;
+}
+
+.gs-tree__row:hover {
+  background: var(--gs-bg-hover);
+}
+
+.gs-tree__row--active {
+  background: var(--gs-bg-active);
+  color: var(--vscode-list-activeSelectionForeground, var(--gs-fg));
+}
+
+.gs-tree__row--directory {
+  color: var(--gs-fg-muted);
+}
+
+.gs-tree__folder-icon {
+  flex: none;
+  color: var(--vscode-symbolIcon-folderForeground, var(--gs-fg-muted));
+}
+
+.gs-tree__name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-tree__binary {
+  flex: none;
+  color: var(--gs-fg-muted);
+  font-family: var(--gs-font-code);
+  font-size: 10px;
+}

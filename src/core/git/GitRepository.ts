@@ -79,6 +79,19 @@ export class GitRepository {
     return commit;
   }
 
+  /** Имя текущей ветки; `undefined` в detached HEAD или в пустом репозитории. */
+  async currentBranch(options: AbortOption = {}): Promise<string | undefined> {
+    try {
+      const name = await this.git.line(['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: this.root, ...options });
+      return name === 'HEAD' || name === '' ? undefined : name;
+    } catch (error) {
+      if (error instanceof GitError) {
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
   /** Все локальные и удалённые ветки и теги. */
   async listRefs(options: AbortOption = {}): Promise<RefInfo[]> {
     const output = await this.git.text(

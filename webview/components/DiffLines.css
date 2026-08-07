@@ -1,0 +1,85 @@
+.gs-diff {
+  overflow-x: auto;
+  font-family: var(--gs-font-code);
+  font-size: var(--gs-font-size-code);
+  line-height: var(--gs-line-height-code);
+  tab-size: 4;
+}
+
+.gs-diff__hunk + .gs-diff__hunk {
+  border-top: 1px solid var(--gs-border);
+}
+
+.gs-diff__row {
+  display: grid;
+  grid-template-columns: 46px 46px 18px 1fr;
+  /* Строка шире контейнера не должна обрезаться при горизонтальной прокрутке. */
+  min-width: max-content;
+  min-height: var(--gs-line-height-code);
+}
+
+.gs-diff__row--insert {
+  background: var(--gs-added-line);
+}
+
+.gs-diff__row--delete {
+  background: var(--gs-removed-line);
+}
+
+.gs-diff__row--note {
+  color: var(--gs-fg-muted);
+  font-style: italic;
+}
+
+.gs-diff__num {
+  padding: 0 8px 0 4px;
+  color: var(--vscode-editorLineNumber-foreground, #6e7681);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  user-select: none;
+}
+
+.gs-diff__marker {
+  color: var(--gs-fg-muted);
+  text-align: center;
+  user-select: none;
+}
+
+.gs-diff__row--insert .gs-diff__marker {
+  color: var(--gs-added-fg);
+}
+
+.gs-diff__row--delete .gs-diff__marker {
+  color: var(--gs-removed-fg);
+}
+
+.gs-diff__code {
+  padding-right: var(--gs-space-4);
+  font: inherit;
+  white-space: pre;
+}
+
+/* --- заголовок хунка --- */
+
+.gs-diff__hunk-header {
+  display: flex;
+  gap: var(--gs-space-3);
+  padding: 2px 8px 2px 12px;
+  background: color-mix(in srgb, var(--gs-fg-muted) 8%, transparent);
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.gs-diff__hunk-range {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-diff__hunk-context {
+  overflow: hidden;
+  opacity: 0.85;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

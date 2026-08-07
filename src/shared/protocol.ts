@@ -31,6 +31,8 @@ export interface PanelState {
   readonly fetch: FetchInfo;
   /** Заполнено, если последняя попытка сравнения провалилась. */
   readonly error: RpcErrorPayload | null;
+  /** Сравнение считается прямо сейчас — панель могла открыться посреди загрузки. */
+  readonly loading: boolean;
 }
 
 /** Запрос на подгрузку свёрнутых строк контекста, нумерация с 1, включительно. */

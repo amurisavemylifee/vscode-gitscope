@@ -213,7 +213,8 @@ export function createRpcServer<Requests extends RpcSchema, Notifications extend
   };
 }
 
-function toErrorPayload(error: unknown): RpcErrorPayload {
+/** Превращает исключение в то, что можно показать пользователю. */
+export function toErrorPayload(error: unknown): RpcErrorPayload {
   if (error instanceof Error) {
     const detail = 'detail' in error && typeof error.detail === 'string' ? error.detail : undefined;
     return detail === undefined ? { message: error.message } : { message: error.message, detail };

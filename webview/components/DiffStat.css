@@ -1,0 +1,42 @@
+.gs-diffstat {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--gs-space-2);
+  font-family: var(--gs-font-code);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gs-diffstat--compact {
+  gap: var(--gs-space-1);
+}
+
+.gs-diffstat__added {
+  color: var(--gs-added-fg);
+}
+
+.gs-diffstat__removed {
+  color: var(--gs-removed-fg);
+}
+
+.gs-diffstat__bar {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.gs-diffstat__cell {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--gs-fg-muted) 35%, transparent);
+}
+
+.gs-diffstat__cell--added {
+  background: var(--gs-added-fg);
+}
+
+.gs-diffstat__cell--removed {
+  background: var(--gs-removed-fg);
+}
