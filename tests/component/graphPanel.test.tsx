@@ -193,6 +193,34 @@ describe('App', () => {
     expect(screen.getByPlaceholderText('Поиск веток…')).toBeInTheDocument();
   });
 
+  it('поповер фильтра закрывается по Escape', async () => {
+    respondWith(state({ snapshot: snapshot() }));
+    render(<App />);
+
+    await screen.findByText('repo');
+    await userEvent.click(screen.getByRole('button', { name: /Ветки: по умолчанию/ }));
+    expect(screen.getByRole('dialog', { name: 'Фильтр веток' })).toBeInTheDocument();
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog', { name: 'Фильтр веток' })).not.toBeInTheDocument();
+  });
+
+  it('поповер фильтра закрывается кликом мимо, но не кликом внутри себя', async () => {
+    respondWith(state({ snapshot: snapshot() }));
+    render(<App />);
+
+    await screen.findByText('repo');
+    await userEvent.click(screen.getByRole('button', { name: /Ветки: по умолчанию/ }));
+
+    // Клик внутри поповера его не закрывает — иначе им нельзя было бы пользоваться.
+    await userEvent.click(screen.getByPlaceholderText('Поиск веток…'));
+    expect(screen.getByRole('dialog', { name: 'Фильтр веток' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByText('repo'));
+    expect(screen.queryByRole('dialog', { name: 'Фильтр веток' })).not.toBeInTheDocument();
+  });
+
   it('чекбокс в панели фильтра шлёт graph/setFilter', async () => {
     respondWith(
       state({
@@ -205,7 +233,7 @@ describe('App', () => {
 
     await screen.findByText('repo');
     await userEvent.click(screen.getByRole('button', { name: /Ветки: по умолчанию/ }));
-    await userEvent.click(screen.getByRole('checkbox', { name: 'main' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /^main/ }));
 
     expect(request).toHaveBeenCalledWith('graph/setFilter', { mode: 'custom', selectedRefs: [] });
   });
@@ -224,12 +252,12 @@ describe('App', () => {
     await screen.findByText('Считаем граф…');
   });
 
-  it('hasMore добавляет «+» к счётчику коммитов', async () => {
+  it('hasMore честно говорит, что показаны не все коммиты', async () => {
     respondWith(state({ snapshot: snapshot([node('a'.repeat(40), 'первый')], { hasMore: true }) }));
     render(<App />);
 
     await screen.findByText('repo');
-    expect(screen.getByText('1 коммит+')).toBeInTheDocument();
+    expect(screen.getByText(/1 коммит и ещё/)).toBeInTheDocument();
   });
 
   it('во время перезагрузки кнопка обновления получает индикатор вращения', async () => {

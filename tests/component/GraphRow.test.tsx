@@ -39,39 +39,18 @@ describe('GraphRow', () => {
     const onSelect = vi.fn();
     render(<GraphRow node={node()} rowLanes={rowLanes} laneCount={1} selected={false} onSelect={onSelect} />);
 
-    await userEvent.click(screen.getByRole('button', { name: /Первый коммит/ }));
+    await userEvent.click(screen.getByRole('option', { name: /Первый коммит/ }));
 
     expect(onSelect).toHaveBeenCalledWith({ kind: 'commit', commit: node().commit } satisfies GraphEntity);
   });
 
-  it('Enter на сфокусированной строке тоже выбирает коммит', async () => {
-    const onSelect = vi.fn();
-    render(<GraphRow node={node()} rowLanes={rowLanes} laneCount={1} selected={false} onSelect={onSelect} />);
+  it('выбранная строка помечена и для screen reader, и классом', () => {
+    const { container } = render(
+      <GraphRow node={node()} rowLanes={rowLanes} laneCount={1} selected onSelect={() => undefined} />,
+    );
 
-    screen.getByRole('button', { name: /Первый коммит/ }).focus();
-    await userEvent.keyboard('{Enter}');
-
-    expect(onSelect).toHaveBeenCalledWith({ kind: 'commit', commit: node().commit } satisfies GraphEntity);
-  });
-
-  it('Пробел на сфокусированной строке тоже выбирает коммит', async () => {
-    const onSelect = vi.fn();
-    render(<GraphRow node={node()} rowLanes={rowLanes} laneCount={1} selected={false} onSelect={onSelect} />);
-
-    screen.getByRole('button', { name: /Первый коммит/ }).focus();
-    await userEvent.keyboard(' ');
-
-    expect(onSelect).toHaveBeenCalledWith({ kind: 'commit', commit: node().commit } satisfies GraphEntity);
-  });
-
-  it('прочие клавиши строку не выбирают', async () => {
-    const onSelect = vi.fn();
-    render(<GraphRow node={node()} rowLanes={rowLanes} laneCount={1} selected={false} onSelect={onSelect} />);
-
-    screen.getByRole('button', { name: /Первый коммит/ }).focus();
-    await userEvent.keyboard('a');
-
-    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole('option', { selected: true })).toBeInTheDocument();
+    expect(container.querySelector('.gs-grow--selected')).not.toBeNull();
   });
 
   it('показывает бейджи веток, тегов и стешей', () => {
@@ -123,14 +102,6 @@ describe('GraphRow', () => {
     expect(onSelect).toHaveBeenCalledWith({ kind: 'branch', ref: branch } satisfies GraphEntity);
   });
 
-  it('выбранная строка получает модификатор', () => {
-    const { container } = render(
-      <GraphRow node={node()} rowLanes={rowLanes} laneCount={1} selected onSelect={() => undefined} />,
-    );
-
-    expect(container.querySelector('.gs-grow--selected')).not.toBeNull();
-  });
-
   it('локальная не текущая ветка и удалённая ветка красятся по-разному', () => {
     const localBranch = { kind: 'head' as const, name: 'feature', sha: 'a'.repeat(40), isCurrent: false };
     const remoteBranch = { kind: 'remote' as const, name: 'origin/feature', sha: 'a'.repeat(40), isCurrent: false };
@@ -148,27 +119,75 @@ describe('GraphRow', () => {
     expect(container.querySelector('.gs-ref-badge--remote')).not.toBeNull();
   });
 
-  it('рисует верхний, сквозной и нижний отрезки дорожек', () => {
-    const lanes: RowLanes = {
-      ownLane: 1,
-      segments: [
-        { lane: 1, part: 'top' },
-        { lane: 0, part: 'through' },
-        { lane: 2, part: 'bottom' },
-      ],
-    };
+  it('merge-коммит рисуется кольцом, обычный — заливкой', () => {
+    const plain = render(
+      <GraphRow node={node()} rowLanes={rowLanes} laneCount={1} selected={false} onSelect={() => undefined} />,
+    );
+    expect(plain.container.querySelector('.gs-grow__dot--merge')).toBeNull();
+    plain.unmount();
+
+    const merge = render(
+      <GraphRow
+        node={node({ commit: { ...node().commit, parents: ['b'.repeat(40), 'c'.repeat(40)] } })}
+        rowLanes={rowLanes}
+        laneCount={1}
+        selected={false}
+        onSelect={() => undefined}
+      />,
+    );
+    expect(merge.container.querySelector('.gs-grow__dot--merge')).not.toBeNull();
+  });
+
+  it('переход в чужую дорожку рисуется кривой, а в свою — прямой линией', () => {
+    const diagonal = render(
+      <GraphRow
+        node={node()}
+        rowLanes={{ ownLane: 0, segments: [{ lane: 2, part: 'bottom' }] }}
+        laneCount={3}
+        selected={false}
+        onSelect={() => undefined}
+      />,
+    );
+    // Кривая Безье: путь, а не отрезок — иначе на плотной истории получается частокол углов.
+    expect(diagonal.container.querySelector('.gs-grow__lanes path')).not.toBeNull();
+    diagonal.unmount();
+
+    const straight = render(
+      <GraphRow
+        node={node()}
+        rowLanes={{ ownLane: 0, segments: [{ lane: 0, part: 'bottom' }] }}
+        laneCount={1}
+        selected={false}
+        onSelect={() => undefined}
+      />,
+    );
+    expect(straight.container.querySelector('.gs-grow__lanes path')).toBeNull();
+    expect(straight.container.querySelectorAll('.gs-grow__lanes line')).toHaveLength(1);
+  });
+
+  it('рисует верхний и сквозной отрезки вертикально', () => {
     const { container } = render(
-      <GraphRow node={node()} rowLanes={lanes} laneCount={3} selected={false} onSelect={() => undefined} />,
+      <GraphRow
+        node={node()}
+        rowLanes={{
+          ownLane: 1,
+          segments: [
+            { lane: 1, part: 'top' },
+            { lane: 0, part: 'through' },
+          ],
+        }}
+        laneCount={2}
+        selected={false}
+        onSelect={() => undefined}
+      />,
     );
 
-    const svgLines = container.querySelectorAll('.gs-grow__lanes line');
-    expect(svgLines).toHaveLength(3);
-    // top: вертикаль от 0 до половины высоты строки.
-    expect(svgLines[0]).toHaveAttribute('y2', '14');
-    // through: на всю высоту строки.
-    expect(svgLines[1]).toHaveAttribute('y1', '0');
-    expect(svgLines[1]).toHaveAttribute('y2', '28');
-    // bottom: диагональ из своей дорожки (1) в чужую (2).
-    expect(svgLines[2]).toHaveAttribute('x1', svgLines[0]?.getAttribute('x1'));
+    const lines = container.querySelectorAll('.gs-grow__lanes line');
+    expect(lines).toHaveLength(2);
+    // top — от верха до середины строки, through — на всю её высоту.
+    expect(lines[0]).toHaveAttribute('y1', '0');
+    expect(lines[0]).toHaveAttribute('y2', '15');
+    expect(lines[1]).toHaveAttribute('y1', '0');
+    expect(lines[1]).toHaveAttribute('y2', '30');
   });
 });

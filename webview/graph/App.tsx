@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GraphEntity } from '@shared/graph/model';
 import { plural } from '@shared/time';
 import { EmptyState } from '../components/EmptyState';
@@ -32,7 +32,12 @@ export function App() {
     persistedState.write<StoredLayout>({ detailsWidth: width });
   });
 
-  const nodes = snapshot?.nodes ?? [];
+  const nodes = useMemo(() => snapshot?.nodes ?? [], [snapshot]);
+  const selectedSha = entitySha(selectedEntity);
+  const selectedNode = useMemo(
+    () => (selectedSha === null ? null : (nodes.find((node) => node.commit.sha === selectedSha) ?? null)),
+    [nodes, selectedSha],
+  );
 
   const jumpToSha = useCallback(
     (sha: string) => {
@@ -85,31 +90,25 @@ export function App() {
   return (
     <div className="gs-gapp">
       <header className="gs-gheader">
-        <span className="gs-gheader__repo">{snapshot.repositoryName}</span>
+        <span className="gs-gheader__repo">
+          <Icon name="branch" size={13} className="gs-gheader__repo-icon" />
+          {snapshot.repositoryName}
+        </span>
         <span className="gs-gheader__count">
           {nodes.length} {plural(nodes.length, ['коммит', 'коммита', 'коммитов'])}
-          {snapshot.hasMore ? '+' : ''}
+          {snapshot.hasMore ? ' и ещё' : ''}
         </span>
 
         <div className="gs-gheader__spacer" />
 
-        <div className="gs-gheader__filter">
-          <button type="button" className="gs-button" onClick={() => setFilterOpen((open) => !open)}>
-            <Icon name="branch" size={13} />
-            {filterModeLabel(snapshot.filter.mode)}
-            <Icon name={filterOpen ? 'chevron-up' : 'chevron-down'} size={12} />
-          </button>
-          {filterOpen ? (
-            <div className="gs-gheader__popover">
-              <BranchFilter
-                availableRefs={snapshot.availableRefs}
-                includedRefs={snapshot.includedRefs}
-                filter={snapshot.filter}
-                onChange={actions.setFilter}
-              />
-            </div>
-          ) : null}
-        </div>
+        <FilterMenu open={filterOpen} onOpenChange={setFilterOpen} label={filterModeLabel(snapshot.filter.mode)}>
+          <BranchFilter
+            availableRefs={snapshot.availableRefs}
+            includedRefs={snapshot.includedRefs}
+            filter={snapshot.filter}
+            onChange={actions.setFilter}
+          />
+        </FilterMenu>
 
         <button
           type="button"
@@ -131,7 +130,7 @@ export function App() {
         <div className="gs-gapp__body">
           <GraphCanvas
             nodes={nodes}
-            selectedSha={entitySha(selectedEntity)}
+            selectedSha={selectedSha}
             hasMore={snapshot.hasMore}
             loading={loading}
             onSelect={setSelectedEntity}
@@ -144,9 +143,80 @@ export function App() {
             aria-label="Ширина панели деталей"
             onPointerDown={startResize}
           />
-          <DetailsPanel entity={selectedEntity} width={detailsWidth} onJumpToSha={jumpToSha} />
+          <DetailsPanel
+            entity={selectedEntity}
+            node={selectedNode}
+            width={detailsWidth}
+            onJumpToSha={jumpToSha}
+            onSelect={setSelectedEntity}
+          />
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Выпадающая панель фильтра веток.
+ *
+ * Закрывается по Escape и клику мимо — иначе поповер, перекрывающий верх графа,
+ * приходилось бы закрывать той же кнопкой, которой открыл, и он воспринимался бы
+ * как режим, а не как меню.
+ */
+function FilterMenu({
+  open,
+  onOpenChange,
+  label,
+  children,
+}: {
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly label: string;
+  readonly children: React.ReactNode;
+}) {
+  const container = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      if (!container.current?.contains(event.target as Node)) {
+        onOpenChange(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onOpenChange(false);
+      }
+    };
+
+    window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, onOpenChange]);
+
+  return (
+    <div className="gs-gheader__filter" ref={container}>
+      <button
+        type="button"
+        className={`gs-button gs-gheader__filter-button${open ? ' gs-gheader__filter-button--open' : ''}`}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => onOpenChange(!open)}
+      >
+        <Icon name="branch" size={13} />
+        {label}
+        <Icon name={open ? 'chevron-up' : 'chevron-down'} size={12} />
+      </button>
+      {open ? (
+        <div className="gs-gheader__popover" role="dialog" aria-label="Фильтр веток">
+          {children}
+        </div>
+      ) : null}
     </div>
   );
 }

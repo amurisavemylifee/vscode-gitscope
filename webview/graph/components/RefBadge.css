@@ -3,18 +3,20 @@
   flex: none;
   align-items: center;
   gap: 4px;
-  max-width: 16ch;
-  padding: 1px 6px 1px 5px;
-  border: 1px solid transparent;
+  max-width: 18ch;
+  padding: 0 7px 0 5px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
   border-radius: var(--gs-radius-lg);
-  background: color-mix(in srgb, currentColor 14%, transparent);
+  background: color-mix(in srgb, currentColor 13%, transparent);
   color: var(--gs-fg-muted);
   font-size: 11px;
-  line-height: 16px;
+  line-height: 17px;
+  transition: background 80ms ease, border-color 80ms ease;
 }
 
 .gs-ref-badge:hover {
   border-color: currentColor;
+  background: color-mix(in srgb, currentColor 22%, transparent);
 }
 
 .gs-ref-badge__label {
@@ -27,6 +29,8 @@
   color: var(--gs-added-fg);
 }
 
+/* Текущая ветка выделена сильнее прочих: это единственная ссылка, относительно
+   которой пользователь читает весь остальной граф. */
 .gs-ref-badge--current {
   color: var(--gs-accent);
   font-weight: 600;
@@ -42,4 +46,5 @@
 
 .gs-ref-badge--stash {
   color: var(--gs-fg-muted);
+  font-family: var(--gs-font-code);
 }

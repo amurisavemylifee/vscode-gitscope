@@ -5,6 +5,13 @@
   overflow: auto;
 }
 
+/* Список — единый объект управления, поэтому рамку фокуса рисуем внутрь по
+   краю области, а не вокруг каждой строки. */
+.gs-gcanvas:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--gs-focus);
+}
+
 .gs-gcanvas__list {
   position: relative;
   width: 100%;
@@ -15,4 +22,18 @@
   top: 0;
   left: 0;
   width: 100%;
+}
+
+/* Плашка догрузки висит над списком у нижнего края: подгрузка идёт при
+   прокрутке вниз, и сообщение должно быть там, куда смотрит пользователь. */
+.gs-gcanvas__more {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding: 4px var(--gs-space-3);
+  border-top: 1px solid var(--gs-border);
+  background: var(--gs-bg-raised);
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+  text-align: center;
 }

@@ -1,12 +1,20 @@
+/*
+ * Колонки одинаковы во всех строках, поэтому автор, дата и sha выстраиваются в
+ * ровные столбцы по всему графу. Ширина области дорожек приходит переменной от
+ * канвы: она зависит от того, сколько дорожек в этом конкретном графе.
+ */
 .gs-grow {
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--gs-lane-area, 60px) minmax(0, 1fr) 12ch 14ch 8ch;
   align-items: center;
   gap: var(--gs-space-2);
   height: 100%;
-  padding: 0 var(--gs-space-3) 0 var(--gs-space-2);
-  border-bottom: 1px solid transparent;
-  overflow: hidden;
-  white-space: nowrap;
+  padding-right: var(--gs-space-3);
+  /* Полоса выделения рисуется вставной тенью, а не border: иначе появление
+     выделения сдвигало бы содержимое строки на пиксель. */
+  box-shadow: inset 2px 0 0 transparent;
+  transition: background 80ms ease, box-shadow 80ms ease;
+  cursor: default;
 }
 
 .gs-grow:hover {
@@ -15,91 +23,118 @@
 
 .gs-grow--selected {
   background: var(--gs-bg-active);
+  box-shadow: inset 2px 0 0 var(--gs-focus);
+  color: var(--vscode-list-activeSelectionForeground, var(--gs-fg));
 }
+
+/* --- дорожки --- */
 
 .gs-grow__lanes {
   flex: none;
+  overflow: visible;
 }
 
-.gs-grow__lanes line {
+.gs-grow__lanes line,
+.gs-grow__lanes path {
+  fill: none;
   stroke: currentColor;
-  stroke-width: 2;
+  stroke-width: 1.75;
+  stroke-linecap: round;
 }
 
 .gs-grow__dot {
   fill: currentColor;
+  /* Обводка цветом фона отделяет точку от линий, проходящих под ней. */
   stroke: var(--gs-bg);
   stroke-width: 1.5;
 }
 
-.gs-grow__sha {
-  flex: none;
-  color: var(--gs-fg-muted);
-  font-family: var(--gs-font-code);
-  font-size: 11px;
+/* Merge-коммит — кольцо: слияния видно в потоке истории без чтения текста. */
+.gs-grow__dot--merge {
+  fill: var(--gs-bg);
+  stroke: currentColor;
+  stroke-width: 2.5;
 }
 
-.gs-grow__subject {
-  flex: 1 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 12px;
+.gs-grow--selected .gs-grow__dot {
+  stroke: var(--gs-bg-raised);
+}
+
+/* --- содержимое --- */
+
+.gs-grow__main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 .gs-grow__badges {
   display: inline-flex;
-  flex: none;
+  flex: 0 1 auto;
   align-items: center;
   gap: 4px;
-  max-width: 40ch;
+  min-width: 0;
   overflow: hidden;
 }
 
-.gs-grow__author {
-  flex: none;
-  max-width: 16ch;
+.gs-grow__subject {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.gs-grow__author,
+.gs-grow__date,
+.gs-grow__sha {
   overflow: hidden;
   color: var(--gs-fg-muted);
   text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 11px;
 }
 
 .gs-grow__date {
-  flex: none;
-  width: 9ch;
-  color: var(--gs-fg-muted);
-  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.gs-grow__sha {
+  font-family: var(--gs-font-code);
   text-align: right;
 }
 
 /*
- * Палитра дорожек: фиксированные оттенки, не завязанные на currentColor темы —
- * граф читается только если соседние дорожки визуально различимы, а этого не
- * добиться одним акцентным цветом темы. Подобраны так, чтобы не совпадать с
- * цветами добавления/удаления диффа (зелёный/красный) и остаться различимыми
- * и в тёмной, и в светлой теме.
+ * Палитра дорожек берётся из chart-цветов темы: они существуют ровно для таких
+ * задач и потому различимы в любой теме пользователя, включая светлые и
+ * контрастные. Запасные значения — только для jsdom в тестах, где переменных нет.
+ * Последние две дорожки собственные: в теме нет бирюзового и розового, а восемь
+ * различимых линий лучше шести.
  */
 .gs-lane-0 {
-  color: #4f9dff;
+  color: var(--vscode-charts-blue, #4f9dff);
 }
 .gs-lane-1 {
-  color: #d68fff;
+  color: var(--vscode-charts-purple, #b180d7);
 }
 .gs-lane-2 {
-  color: #ff9f5a;
+  color: var(--vscode-charts-orange, #d18616);
 }
 .gs-lane-3 {
-  color: #38c7c7;
+  color: var(--vscode-charts-green, #89d185);
 }
 .gs-lane-4 {
-  color: #ff7ab8;
+  color: var(--vscode-charts-red, #f14c4c);
 }
 .gs-lane-5 {
-  color: #d0d64a;
+  color: var(--vscode-charts-yellow, #cca700);
 }
 .gs-lane-6 {
-  color: #7a8cff;
+  color: #3aa8a8;
 }
 .gs-lane-7 {
-  color: #6fcf6f;
+  color: #e06c9f;
 }

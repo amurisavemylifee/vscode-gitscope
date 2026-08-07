@@ -25,6 +25,34 @@ describe('BranchFilter', () => {
     expect(screen.getByText('origin/main')).toBeInTheDocument();
   });
 
+  it('разделяет локальные ветки и ветки с сервера', () => {
+    render(
+      <BranchFilter availableRefs={refs} includedRefs={['main']} filter={defaultFilter} onChange={() => undefined} />,
+    );
+
+    expect(screen.getByText('Локальные')).toBeInTheDocument();
+    expect(screen.getByText('С сервера')).toBeInTheDocument();
+  });
+
+  it('текущая ветка помечена', () => {
+    render(
+      <BranchFilter availableRefs={refs} includedRefs={['main']} filter={defaultFilter} onChange={() => undefined} />,
+    );
+
+    expect(screen.getByText('текущая')).toBeInTheDocument();
+  });
+
+  it('пустая группа не рисует свой заголовок', async () => {
+    render(
+      <BranchFilter availableRefs={refs} includedRefs={['main']} filter={defaultFilter} onChange={() => undefined} />,
+    );
+
+    await userEvent.type(screen.getByPlaceholderText('Поиск веток…'), 'feature');
+
+    expect(screen.getByText('Локальные')).toBeInTheDocument();
+    expect(screen.queryByText('С сервера')).not.toBeInTheDocument();
+  });
+
   it('поиск фильтрует список по подстроке', async () => {
     render(
       <BranchFilter
@@ -51,8 +79,8 @@ describe('BranchFilter', () => {
       />,
     );
 
-    expect(screen.getByRole('checkbox', { name: 'main' })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'feature' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /^main/ })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /^feature/ })).not.toBeChecked();
   });
 
   it('снятие галочки с дефолтной ветки переключает фильтр в custom, исключая её', async () => {
@@ -66,7 +94,7 @@ describe('BranchFilter', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('checkbox', { name: 'main' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /^main/ }));
 
     expect(onChange).toHaveBeenCalledWith({ mode: 'custom', selectedRefs: ['feature'] });
   });
@@ -83,7 +111,7 @@ describe('BranchFilter', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('checkbox', { name: 'feature' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /^feature/ }));
 
     expect(onChange).toHaveBeenCalledWith({ mode: 'custom', selectedRefs: ['main', 'feature'] });
   });
@@ -99,7 +127,7 @@ describe('BranchFilter', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Показать все ветки (--all)' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /Показать все ветки/ }));
 
     expect(onChange).toHaveBeenCalledWith({ mode: 'all', selectedRefs: [] });
   });
@@ -115,7 +143,7 @@ describe('BranchFilter', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Показать все ветки (--all)' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /Показать все ветки/ }));
 
     expect(onChange).toHaveBeenCalledWith({ mode: 'default', selectedRefs: [] });
   });
@@ -130,7 +158,7 @@ describe('BranchFilter', () => {
       />,
     );
 
-    expect(screen.getByRole('checkbox', { name: 'main' })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: /^main/ })).toBeDisabled();
   });
 
   it('кнопка сброса появляется только в custom и возвращает к default', async () => {
