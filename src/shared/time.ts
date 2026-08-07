@@ -26,26 +26,6 @@ export function plural(count: number, forms: readonly [string, string, string]):
 }
 
 /**
- * Полные дата и время локали пользователя — для подсказки под относительной
- * датой: «2 месяца назад» отвечает на «давно ли», но не на «когда именно».
- *
- * На нераспознанном значении возвращает пустую строку, как и `formatRelativeTime`.
- */
-export function formatAbsoluteTime(value: number | string): string {
-  const timestamp = typeof value === 'number' ? value : Date.parse(value);
-  if (!Number.isFinite(timestamp)) {
-    return '';
-  }
-  return new Date(timestamp).toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-/**
  * «3 минуты назад», «вчера», «2 месяца назад».
  *
  * Принимает миллисекунды или ISO-строку; на нераспознанном значении возвращает

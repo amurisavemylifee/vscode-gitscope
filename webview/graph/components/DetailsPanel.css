@@ -2,7 +2,7 @@
   display: flex;
   flex: none;
   flex-direction: column;
-  gap: var(--gs-space-3);
+  gap: var(--gs-space-2);
   min-width: 0;
   padding: var(--gs-space-3);
   overflow-y: auto;
@@ -10,41 +10,14 @@
   background: var(--vscode-sideBar-background, var(--gs-bg));
 }
 
-/* --- шапка сущности --- */
-
-.gs-details__head {
+.gs-details__header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-  padding: 2px 8px 2px 6px;
-  border-radius: var(--gs-radius-lg);
-  background: color-mix(in srgb, currentColor 14%, transparent);
+  gap: var(--gs-space-2);
+  color: var(--gs-fg-muted);
   font-size: 11px;
-  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-
-/* Оттенок шапки совпадает с цветом бейджа этой же сущности в графе — глаз
-   связывает панель с тем, по чему кликнул, без чтения заголовка. */
-.gs-details__head--commit {
-  color: var(--gs-fg-muted);
-}
-.gs-details__head--branch {
-  color: var(--gs-added-fg);
-}
-.gs-details__head--current {
-  color: var(--gs-accent);
-}
-.gs-details__head--remote {
-  color: var(--gs-renamed-fg);
-}
-.gs-details__head--tag {
-  color: var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
-}
-.gs-details__head--stash {
-  color: var(--gs-fg-muted);
 }
 
 .gs-details__subject {
@@ -52,16 +25,12 @@
   overflow-wrap: break-word;
   font-size: 13px;
   font-weight: 600;
-  line-height: 1.4;
 }
 
-/* --- пары «поле — значение» --- */
-
-.gs-details__meta {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+.gs-details__field {
+  display: flex;
+  flex-direction: column;
   gap: 2px;
-  margin: 0;
 }
 
 .gs-details__label {
@@ -70,21 +39,12 @@
 }
 
 .gs-details__value {
-  margin: 0 0 var(--gs-space-2);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   font-size: 12px;
 }
 
 .gs-details__value--mono {
   font-family: var(--gs-font-code);
-}
-
-/* Абсолютная дата — подпись под относительной: «когда именно» нужно реже,
-   чем «давно ли», но искать его в тултипе неудобно. */
-.gs-details__value-note {
-  display: block;
-  color: var(--gs-fg-muted);
-  font-size: 11px;
 }
 
 .gs-details__note {
@@ -93,85 +53,23 @@
   font-size: 12px;
 }
 
-/* --- sha и копирование --- */
-
-.gs-details__sha-row {
-  display: flex;
-  align-items: baseline;
-  gap: var(--gs-space-2);
-}
-
-.gs-details__sha-link {
-  min-width: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--gs-accent);
-  font-family: var(--gs-font-code);
-  font-size: 12px;
-  text-align: left;
-  overflow-wrap: anywhere;
-}
-
-.gs-details__sha-link:hover {
-  text-decoration: underline;
-}
-
-.gs-details__copy {
-  flex: none;
-  padding: 0 4px;
-  border: none;
-  border-radius: var(--gs-radius-sm);
-  background: transparent;
-  color: var(--gs-fg-muted);
-  font-size: 11px;
-}
-
-.gs-details__copy:hover {
-  background: var(--gs-bg-hover);
-  color: var(--gs-fg);
-}
-
-/* --- секции --- */
-
-.gs-details__section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-top: var(--gs-space-2);
-  border-top: 1px solid color-mix(in srgb, var(--gs-border) 70%, transparent);
-}
-
-.gs-details__section-title {
-  margin: 0;
-  color: var(--gs-fg-muted);
-  font-size: 11px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.gs-details__chips {
+.gs-details__shas {
   display: flex;
   flex-wrap: wrap;
   gap: var(--gs-space-1);
 }
 
-.gs-details__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
+.gs-details__sha-button {
+  padding: 2px 6px;
   border: 1px solid var(--gs-border);
-  border-radius: var(--gs-radius-lg);
+  border-radius: var(--gs-radius-sm);
   background: var(--gs-bg);
   color: var(--gs-accent);
   font-family: var(--gs-font-code);
   font-size: 11px;
-  transition: background 80ms ease, border-color 80ms ease;
 }
 
-.gs-details__chip:hover {
+.gs-details__sha-button:hover {
   border-color: var(--gs-accent);
   background: var(--gs-bg-hover);
 }

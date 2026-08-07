@@ -24,18 +24,10 @@ export function BranchFilter({ availableRefs, includedRefs, filter, onChange }: 
   const [search, setSearch] = useState('');
 
   const includedSet = useMemo(() => new Set(includedRefs), [includedRefs]);
-  const { local, remote } = useMemo(() => {
+  const branches = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const matching = availableRefs.filter(
-      (ref) => ref.kind !== 'tag' && (query === '' || ref.name.toLowerCase().includes(query)),
-    );
-    return {
-      local: matching.filter((ref) => ref.kind === 'head'),
-      remote: matching.filter((ref) => ref.kind === 'remote'),
-    };
+    return availableRefs.filter((ref) => ref.kind !== 'tag' && (query === '' || ref.name.toLowerCase().includes(query)));
   }, [availableRefs, search]);
-
-  const showingAll = filter.mode === 'all';
 
   const toggle = (name: string) => {
     const base = filter.mode === 'custom' ? filter.selectedRefs : includedRefs;
@@ -43,33 +35,9 @@ export function BranchFilter({ availableRefs, includedRefs, filter, onChange }: 
     onChange({ mode: 'custom', selectedRefs: next });
   };
 
-  const renderGroup = (title: string, refs: readonly GraphRef[]) =>
-    refs.length === 0 ? null : (
-      <li className="gs-bfilter__group">
-        <h3 className="gs-bfilter__group-title">{title}</h3>
-        <ul className="gs-bfilter__group-list">
-          {refs.map((ref) => (
-            <li key={`${ref.kind}:${ref.name}`}>
-              <label className={`gs-bfilter__item${ref.isCurrent ? ' gs-bfilter__item--current' : ''}`}>
-                <input
-                  type="checkbox"
-                  disabled={showingAll}
-                  checked={showingAll || includedSet.has(ref.name)}
-                  onChange={() => toggle(ref.name)}
-                />
-                <Icon name={ref.kind === 'remote' ? 'remote' : 'branch'} size={12} />
-                <span className="gs-bfilter__name">{ref.name}</span>
-                {ref.isCurrent ? <span className="gs-bfilter__current-mark">текущая</span> : null}
-              </label>
-            </li>
-          ))}
-        </ul>
-      </li>
-    );
-
   return (
-    <div className="gs-bfilter">
-      <div className="gs-bfilter__search">
+    <div className="gs-branch-filter">
+      <div className="gs-branch-filter__search">
         <Icon name="search" size={13} />
         <input
           type="text"
@@ -79,35 +47,37 @@ export function BranchFilter({ availableRefs, includedRefs, filter, onChange }: 
         />
       </div>
 
-      <label className="gs-bfilter__all">
+      <label className="gs-branch-filter__all">
         <input
           type="checkbox"
-          checked={showingAll}
+          checked={filter.mode === 'all'}
           onChange={(event) =>
             onChange(event.target.checked ? { mode: 'all', selectedRefs: [] } : { mode: 'default', selectedRefs: [] })
           }
         />
-        <span>
-          Показать все ветки
-          <span className="gs-bfilter__hint">включая давно не тронутые — граф станет плотнее</span>
-        </span>
+        Показать все ветки (--all)
       </label>
 
-      {local.length + remote.length === 0 ? (
-        <p className="gs-bfilter__empty">Ничего не найдено</p>
-      ) : (
-        <ul className="gs-bfilter__list">
-          {renderGroup('Локальные', local)}
-          {renderGroup('С сервера', remote)}
-        </ul>
-      )}
+      <ul className="gs-branch-filter__list">
+        {branches.map((ref) => (
+          <li key={`${ref.kind}:${ref.name}`}>
+            <label className="gs-branch-filter__item">
+              <input
+                type="checkbox"
+                disabled={filter.mode === 'all'}
+                checked={filter.mode === 'all' || includedSet.has(ref.name)}
+                onChange={() => toggle(ref.name)}
+              />
+              <Icon name={ref.kind === 'remote' ? 'remote' : 'branch'} size={12} />
+              <span className="gs-branch-filter__name">{ref.name}</span>
+            </label>
+          </li>
+        ))}
+        {branches.length === 0 ? <li className="gs-branch-filter__empty">Ничего не найдено</li> : null}
+      </ul>
 
       {filter.mode === 'custom' ? (
-        <button
-          type="button"
-          className="gs-bfilter__reset"
-          onClick={() => onChange({ mode: 'default', selectedRefs: [] })}
-        >
+        <button type="button" className="gs-button" onClick={() => onChange({ mode: 'default', selectedRefs: [] })}>
           Сбросить к дефолту
         </button>
       ) : null}

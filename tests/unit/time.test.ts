@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatAbsoluteTime, formatRelativeTime, plural } from '@shared/time';
+import { formatRelativeTime, plural } from '@shared/time';
 
 const now = Date.parse('2026-08-07T12:00:00Z');
 const ago = (ms: number) => formatRelativeTime(now - ms, now);
@@ -57,22 +57,5 @@ describe('formatRelativeTime', () => {
 
   it('честно говорит про время из будущего', () => {
     expect(formatRelativeTime(now + HOUR, now)).toBe('в будущем');
-  });
-});
-
-describe('formatAbsoluteTime', () => {
-  it('показывает и дату, и время — иначе подпись не отвечает на «когда именно»', () => {
-    const formatted = formatAbsoluteTime('2026-08-07T09:30:00Z');
-
-    expect(formatted).toMatch(/2026/);
-    expect(formatted).toMatch(/\d{2}:\d{2}/);
-  });
-
-  it('принимает миллисекунды так же, как ISO-строку', () => {
-    expect(formatAbsoluteTime(now)).toBe(formatAbsoluteTime('2026-08-07T12:00:00Z'));
-  });
-
-  it('не притворяется, что понял мусор', () => {
-    expect(formatAbsoluteTime('не дата')).toBe('');
   });
 });

@@ -1,17 +1,13 @@
 import type { GraphEntity, GraphNode } from '@shared/graph/model';
-import { formatAbsoluteTime, formatRelativeTime } from '@shared/time';
+import { formatRelativeTime } from '@shared/time';
 import { badgeAppearance, RefBadge, type BadgeEntity } from './RefBadge';
 import type { RowLanes, RowSegment } from '../lanes';
 import './GraphRow.css';
 
-export const ROW_HEIGHT = 30;
-export const LANE_WIDTH = 15;
+export const ROW_HEIGHT = 28;
+export const LANE_WIDTH = 16;
 /** Число различимых цветов дорожек — дальше циклически повторяются. */
 export const LANE_PALETTE_SIZE = 8;
-
-const DOT_RADIUS = 4;
-/** Радиус кольца merge-коммита: чуть больше обычной точки, чтобы слияние читалось с одного взгляда. */
-const MERGE_DOT_RADIUS = 4.5;
 
 interface GraphRowProps {
   readonly node: GraphNode;
@@ -23,16 +19,20 @@ interface GraphRowProps {
 
 /** Одна строка графа: дорожки слева, коммит и бейджи справа. */
 export function GraphRow({ node, rowLanes, laneCount, selected, onSelect }: GraphRowProps) {
-  const { commit } = node;
-  const isMerge = commit.parents.length > 1;
-  const decorations = node.branches.length + node.tags.length + node.stashes.length;
+  const selectCommit = () => onSelect({ kind: 'commit', commit: node.commit });
 
   return (
     <div
       className={`gs-grow${selected ? ' gs-grow--selected' : ''}`}
-      role="option"
-      aria-selected={selected}
-      onClick={() => onSelect({ kind: 'commit', commit })}
+      role="button"
+      tabIndex={0}
+      onClick={selectCommit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          selectCommit();
+        }
+      }}
     >
       <svg
         className="gs-grow__lanes"
@@ -45,39 +45,34 @@ export function GraphRow({ node, rowLanes, laneCount, selected, onSelect }: Grap
           <LaneSegment key={index} segment={segment} ownLane={rowLanes.ownLane} />
         ))}
         <circle
-          className={`gs-grow__dot${isMerge ? ' gs-grow__dot--merge' : ''} gs-lane-${rowLanes.ownLane % LANE_PALETTE_SIZE}`}
+          className={`gs-grow__dot gs-lane-${rowLanes.ownLane % LANE_PALETTE_SIZE}`}
           cx={laneX(rowLanes.ownLane)}
           cy={ROW_HEIGHT / 2}
-          r={isMerge ? MERGE_DOT_RADIUS : DOT_RADIUS}
+          r={4}
         />
       </svg>
 
-      <span className="gs-grow__main">
-        {decorations > 0 ? (
-          <span className="gs-grow__badges">
-            {node.branches.map((ref) => (
-              <RefBadgeFor key={`branch:${ref.kind}:${ref.name}`} entity={{ kind: 'branch', ref }} onSelect={onSelect} />
-            ))}
-            {node.tags.map((ref) => (
-              <RefBadgeFor key={`tag:${ref.name}`} entity={{ kind: 'tag', ref }} onSelect={onSelect} />
-            ))}
-            {node.stashes.map((stash) => (
-              <RefBadgeFor key={`stash:${stash.ref}`} entity={{ kind: 'stash', stash }} onSelect={onSelect} />
-            ))}
-          </span>
-        ) : null}
-        <span className="gs-grow__subject" title={commit.subject}>
-          {commit.subject}
-        </span>
+      <span className="gs-grow__sha">{node.commit.shortSha}</span>
+      <span className="gs-grow__subject" title={node.commit.subject}>
+        {node.commit.subject}
       </span>
 
-      <span className="gs-grow__author" title={commit.authorName}>
-        {commit.authorName}
-      </span>
-      <span className="gs-grow__date" title={formatAbsoluteTime(commit.authoredAt)}>
-        {formatRelativeTime(commit.authoredAt)}
-      </span>
-      <span className="gs-grow__sha">{commit.shortSha}</span>
+      {node.branches.length + node.tags.length + node.stashes.length > 0 ? (
+        <span className="gs-grow__badges">
+          {node.branches.map((ref) => (
+            <RefBadgeFor key={`branch:${ref.kind}:${ref.name}`} entity={{ kind: 'branch', ref }} onSelect={onSelect} />
+          ))}
+          {node.tags.map((ref) => (
+            <RefBadgeFor key={`tag:${ref.name}`} entity={{ kind: 'tag', ref }} onSelect={onSelect} />
+          ))}
+          {node.stashes.map((stash) => (
+            <RefBadgeFor key={`stash:${stash.ref}`} entity={{ kind: 'stash', stash }} onSelect={onSelect} />
+          ))}
+        </span>
+      ) : null}
+
+      <span className="gs-grow__author">{node.commit.authorName}</span>
+      <span className="gs-grow__date">{formatRelativeTime(node.commit.authoredAt)}</span>
     </div>
   );
 }
@@ -99,37 +94,18 @@ function laneX(lane: number): number {
   return lane * LANE_WIDTH + LANE_WIDTH / 2;
 }
 
-/**
- * Отрезок одной дорожки внутри строки.
- *
- * Переход между дорожками рисуется кубической кривой, а не диагональю: на
- * плотной истории ломаные линии дают «частокол» из острых углов, и глаз
- * перестаёт прослеживать отдельную линию. Контрольные точки стоят на середине
- * по вертикали — получается симметричная S, у которой начало и конец строго
- * вертикальны и стыкуются с соседними строками без излома.
- */
+/** Отрезок одной дорожки внутри строки — вертикальный или диагональный. */
 function LaneSegment({ segment, ownLane }: { readonly segment: RowSegment; readonly ownLane: number }) {
   const colorClass = `gs-lane-${segment.lane % LANE_PALETTE_SIZE}`;
-  const middle = ROW_HEIGHT / 2;
 
   if (segment.part === 'top') {
-    return <line className={colorClass} x1={laneX(segment.lane)} y1={0} x2={laneX(segment.lane)} y2={middle} />;
+    return <line className={colorClass} x1={laneX(segment.lane)} y1={0} x2={laneX(segment.lane)} y2={ROW_HEIGHT / 2} />;
   }
   if (segment.part === 'through') {
     return <line className={colorClass} x1={laneX(segment.lane)} y1={0} x2={laneX(segment.lane)} y2={ROW_HEIGHT} />;
   }
-
-  const from = laneX(ownLane);
-  const to = laneX(segment.lane);
-  if (from === to) {
-    return <line className={colorClass} x1={from} y1={middle} x2={to} y2={ROW_HEIGHT} />;
-  }
-
-  const control = middle + (ROW_HEIGHT - middle) / 2;
+  // 'bottom' — от центра дорожки этого коммита до низа строки, в дорожку родителя.
   return (
-    <path
-      className={colorClass}
-      d={`M ${from} ${middle} C ${from} ${control}, ${to} ${control}, ${to} ${ROW_HEIGHT}`}
-    />
+    <line className={colorClass} x1={laneX(ownLane)} y1={ROW_HEIGHT / 2} x2={laneX(segment.lane)} y2={ROW_HEIGHT} />
   );
 }
