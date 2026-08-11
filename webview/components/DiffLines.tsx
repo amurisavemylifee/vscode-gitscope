@@ -1,9 +1,9 @@
 import type { SplitCell } from '@shared/diff/splitRows';
 import type { DiffLine, Hunk } from '@shared/model';
 import { plural } from '@shared/time';
-import { buildCodeSegments } from '../diff/segments';
 import type { DiffRow } from '../diff/rows';
 import type { LineTokens } from '../syntax/highlighter';
+import { CodeText } from './CodeText';
 import { Icon } from './Icon';
 import './DiffLines.css';
 
@@ -12,11 +12,6 @@ const MARKERS: Record<DiffLine['kind'], string> = {
   insert: '+',
   delete: '−',
 };
-
-/** Флаги начертания из Shiki: 1 — курсив, 2 — жирный, 4 — подчёркивание. */
-const ITALIC = 1;
-const BOLD = 2;
-const UNDERLINE = 4;
 
 /** Сколько строк открывать за один шаг у большого промежутка. */
 export const EXPAND_STEP = 20;
@@ -46,7 +41,7 @@ export function LineRow({ line, tokens }: { readonly line: DiffLine; readonly to
           {MARKERS[line.kind]}
         </span>
         <code className="gs-diff__code">
-          <CodeText line={line} tokens={tokens} />
+          <CodeText text={line.text} tokens={tokens} ranges={line.inlineRanges} kind={line.kind} />
         </code>
       </div>
       {line.noNewlineAtEof ? <NoNewlineNote /> : null}
@@ -95,7 +90,9 @@ function SplitSide({
         {cell ? MARKERS[cell.line.kind] : ''}
       </span>
       <code className={`gs-diff__code gs-split__cell gs-split__cell--${kind}`}>
-        {cell ? <CodeText line={cell.line} tokens={tokens} /> : null}
+        {cell ? (
+          <CodeText text={cell.line.text} tokens={tokens} ranges={cell.line.inlineRanges} kind={cell.line.kind} />
+        ) : null}
       </code>
     </>
   );
@@ -196,40 +193,5 @@ function NoNewlineNote() {
       </span>
       <code className="gs-diff__code">в конце файла нет перевода строки</code>
     </div>
-  );
-}
-
-/**
- * Текст строки: подсветка синтаксиса и словный diff одновременно.
- *
- * Пока токены не досчитались, строка показывается обычным текстом — подсветка
- * никогда не задерживает появление диффа.
- */
-function CodeText({ line, tokens }: { readonly line: DiffLine; readonly tokens: LineTokens | undefined }) {
-  const segments = buildCodeSegments(line.text, tokens, line.inlineRanges);
-
-  if (segments.length === 0) {
-    return null;
-  }
-
-  return (
-    <>
-      {segments.map((segment, index) => (
-        <span
-          key={index}
-          className={segment.changed ? `gs-diff__changed gs-diff__changed--${line.kind}` : undefined}
-          style={{
-            ...(segment.color !== undefined ? { color: segment.color } : {}),
-            ...(segment.fontStyle !== undefined && segment.fontStyle & ITALIC ? { fontStyle: 'italic' } : {}),
-            ...(segment.fontStyle !== undefined && segment.fontStyle & BOLD ? { fontWeight: 'bold' } : {}),
-            ...(segment.fontStyle !== undefined && segment.fontStyle & UNDERLINE
-              ? { textDecoration: 'underline' }
-              : {}),
-          }}
-        >
-          {segment.text}
-        </span>
-      ))}
-    </>
   );
 }

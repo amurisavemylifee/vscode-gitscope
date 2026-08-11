@@ -1,0 +1,92 @@
+.gs-history-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--gs-space-2);
+  min-height: 38px;
+  padding: 0 var(--gs-space-3);
+  border-bottom: 1px solid var(--gs-border);
+  background: var(--gs-bg-raised);
+}
+
+.gs-history-header__icon {
+  flex: none;
+  color: var(--gs-fg-muted);
+}
+
+.gs-history-header__path {
+  display: flex;
+  align-items: baseline;
+  overflow: hidden;
+  flex: 0 1 auto;
+  font-family: var(--gs-font-code);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Путь к папке приглушён: глаз ищет имя файла, а не дорогу к нему. */
+.gs-history-header__directory {
+  overflow: hidden;
+  color: var(--gs-fg-muted);
+  text-overflow: ellipsis;
+  direction: rtl;
+}
+
+.gs-history-header__name {
+  flex: none;
+  font-weight: 600;
+}
+
+.gs-history-header__repository {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: var(--gs-radius-sm);
+  background: color-mix(in srgb, var(--gs-fg-muted) 14%, transparent);
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+}
+
+.gs-history-header__spacer {
+  flex: 1 1 auto;
+}
+
+.gs-history-header__count {
+  flex: none;
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.gs-history-header__action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  border: none;
+  border-radius: var(--gs-radius-sm);
+  background: transparent;
+  color: var(--gs-fg-muted);
+}
+
+.gs-history-header__action:hover:not(:disabled) {
+  background: var(--gs-bg-hover);
+  color: var(--gs-fg);
+}
+
+.gs-history-header__action--spinning svg {
+  animation: gs-spin 900ms linear infinite;
+}
+
+@keyframes gs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-history-header__action--spinning svg {
+    animation: none;
+  }
+}

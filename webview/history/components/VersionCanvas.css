@@ -1,0 +1,73 @@
+.gs-version {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.gs-version__list {
+  position: relative;
+  width: 100%;
+}
+
+.gs-version__row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* Строка кода может быть шире панели: тогда она растягивает область
+     прокрутки, а короткие строки всё равно занимают всю видимую ширину. */
+  min-width: 100%;
+  width: max-content;
+}
+
+/* --- строка файла целиком --- */
+
+.gs-code {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  min-height: var(--gs-line-height-code);
+  font-family: var(--gs-font-code);
+  font-size: var(--gs-font-size-code);
+  line-height: var(--gs-line-height-code);
+  tab-size: 4;
+}
+
+.gs-code__num {
+  padding: 0 12px 0 4px;
+  color: var(--vscode-editorLineNumber-foreground, #6e7681);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  user-select: none;
+}
+
+.gs-code__text {
+  padding: 0 var(--gs-space-4) 0 0;
+  background-color: rgba(0, 0, 0, 0);
+  font: inherit;
+  white-space: pre;
+}
+
+/* --- служебные строки --- */
+
+.gs-version__notice {
+  display: flex;
+  align-items: center;
+  gap: var(--gs-space-2);
+  height: 32px;
+  padding: 0 var(--gs-space-4);
+  font-size: 12px;
+}
+
+.gs-version__notice--muted {
+  color: var(--gs-fg-muted);
+}
+
+.gs-version__notice--error {
+  background: color-mix(in srgb, var(--vscode-errorForeground, #f48771) 10%, transparent);
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.gs-version__notice--warning {
+  background: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 12%, transparent);
+  color: var(--vscode-editorWarning-foreground, #cca700);
+}

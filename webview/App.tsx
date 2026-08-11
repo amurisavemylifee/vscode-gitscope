@@ -11,6 +11,7 @@ import { useCodeLineHeight } from './hooks/useCodeLineHeight';
 import { useExpandedContext } from './hooks/useExpandedContext';
 import { usePanelState } from './hooks/usePanelState';
 import { usePatches } from './hooks/usePatches';
+import { useResizer } from './hooks/useResizer';
 import { useSyntaxTheme, useSyntaxTokens } from './hooks/useSyntaxTokens';
 import './App.css';
 
@@ -81,10 +82,11 @@ export function App() {
     persistedState.write<StoredLayout>({ viewMode: mode });
   }, []);
 
-  const startResize = useResizer(treeWidth, (width) => {
+  const onTreeWidthChange = useCallback((width: number) => {
     setTreeWidth(width);
     persistedState.write<StoredLayout>({ treeWidth: width });
-  });
+  }, []);
+  const startResize = useResizer(treeWidth, onTreeWidthChange, MIN_TREE_WIDTH, MAX_TREE_WIDTH);
 
   const header = (
     <CompareHeader
@@ -211,40 +213,4 @@ export function App() {
       </div>
     </div>
   );
-}
-
-/** Перетаскивание границы между деревом и списком изменений. */
-function useResizer(current: number, onChange: (width: number) => void) {
-  const width = useRef(current);
-  width.current = current;
-
-  const [dragging, setDragging] = useState(false);
-
-  useEffect(() => {
-    if (!dragging) {
-      return;
-    }
-    const onMove = (event: PointerEvent) => {
-      const next = Math.min(MAX_TREE_WIDTH, Math.max(MIN_TREE_WIDTH, event.clientX));
-      if (next !== width.current) {
-        onChange(next);
-      }
-    };
-    const onUp = () => setDragging(false);
-
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp, { once: true });
-    document.body.style.cursor = 'col-resize';
-    // Пока тянем границу, выделение текста в диффе только мешает.
-    document.body.style.userSelect = 'none';
-
-    return () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [dragging, onChange]);
-
-  return useCallback(() => setDragging(true), []);
 }

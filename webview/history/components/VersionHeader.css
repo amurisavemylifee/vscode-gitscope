@@ -1,0 +1,99 @@
+.gs-version-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--gs-space-2);
+  min-height: 34px;
+  padding: 0 var(--gs-space-3);
+  border-bottom: 1px solid var(--gs-border);
+  background: var(--gs-bg-raised);
+}
+
+.gs-version-header__path {
+  overflow: hidden;
+  flex: 0 1 auto;
+  font-family: var(--gs-font-code);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-version-header__meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  flex: 0 1 auto;
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.gs-version-header__sha {
+  font-family: var(--gs-font-code);
+}
+
+.gs-version-header__separator {
+  opacity: 0.6;
+}
+
+.gs-version-header__spacer {
+  flex: 1 1 auto;
+}
+
+.gs-version-header__action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  border: none;
+  border-radius: var(--gs-radius-sm);
+  background: transparent;
+  color: var(--gs-fg-muted);
+  transition: background 80ms ease, color 80ms ease;
+}
+
+.gs-version-header__action:hover {
+  background: var(--gs-bg-hover);
+  color: var(--gs-fg);
+}
+
+.gs-version-header__action--done {
+  color: var(--gs-added-fg);
+}
+
+/* --- переключатель из нескольких кнопок --- */
+
+.gs-segmented {
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+  border: 1px solid var(--gs-border);
+  border-radius: var(--gs-radius-md);
+}
+
+.gs-segmented__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--gs-radius-sm);
+  background: transparent;
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+  transition: background 80ms ease, color 80ms ease;
+}
+
+.gs-segmented__button:hover {
+  color: var(--gs-fg);
+}
+
+.gs-segmented__button--active {
+  background: var(--gs-bg-active);
+  color: var(--vscode-list-activeSelectionForeground, var(--gs-fg));
+}

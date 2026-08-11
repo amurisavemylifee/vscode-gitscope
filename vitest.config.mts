@@ -43,7 +43,12 @@ export default defineConfig({
       // Таблица грамматик — сорок ленивых import(), которые в тестах никто не
       // выполняет: они утянули бы покрытие функций вниз, ничего не измеряя.
       // Сама логика сопоставления расширений тестируется отдельно.
-      exclude: ['webview/syntax/languages.ts', 'webview/main.tsx', 'webview/vite-env.d.ts'],
+      exclude: [
+        'webview/syntax/languages.ts',
+        'webview/main.tsx',
+        'webview/history/main.tsx',
+        'webview/vite-env.d.ts',
+      ],
       reporter: ['text', 'html'],
       thresholds: {
         lines: 80,

@@ -1,0 +1,219 @@
+.gs-entries {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  outline-offset: -1px;
+}
+
+.gs-entries__list {
+  position: relative;
+  width: 100%;
+}
+
+.gs-entries__row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.gs-entries__more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+}
+
+/* --- карточка версии --- */
+
+.gs-entry {
+  position: relative;
+  height: 100%;
+  padding: 10px 10px 10px 30px;
+  cursor: pointer;
+  transition: background 80ms ease;
+}
+
+.gs-entry:hover {
+  background: var(--gs-bg-hover);
+}
+
+.gs-entry--selected,
+.gs-entry--selected:hover {
+  background: var(--gs-bg-active);
+  color: var(--vscode-list-activeSelectionForeground, var(--gs-fg));
+  /* Полоса вставной тенью, а не рамкой: рамка сдвинула бы содержимое карточки
+     на пиксель, и список дёргался бы при каждом переходе. */
+  box-shadow: inset 2px 0 0 var(--gs-accent);
+}
+
+/* --- линия с точками слева --- */
+
+.gs-entry__rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 26px;
+}
+
+.gs-entry__rail::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 13px;
+  width: 1px;
+  background: color-mix(in srgb, var(--gs-fg-muted) 32%, transparent);
+}
+
+/* У крайних версий линия начинается и заканчивается точкой, а не обрывается
+   в пустоте на границе списка. */
+.gs-entry--first .gs-entry__rail::before {
+  top: 20px;
+}
+
+.gs-entry--last .gs-entry__rail::before {
+  bottom: calc(100% - 20px);
+}
+
+.gs-entry__dot {
+  position: absolute;
+  top: 15px;
+  left: 8px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--gs-fg-muted);
+  border-radius: 50%;
+  background: var(--gs-bg);
+}
+
+.gs-entry--selected .gs-entry__dot {
+  border-color: var(--gs-accent);
+  background: var(--gs-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gs-accent) 25%, transparent);
+}
+
+/* Рабочая копия — ещё не история: точка полая и другого цвета. */
+.gs-entry--working .gs-entry__dot {
+  border-color: var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
+}
+
+/* --- содержимое карточки --- */
+
+.gs-entry__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.gs-entry__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.gs-entry__row--meta {
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+}
+
+.gs-entry--selected .gs-entry__row--meta {
+  color: inherit;
+  opacity: 0.75;
+}
+
+.gs-entry__subject {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-entry__author,
+.gs-entry__when,
+.gs-entry__note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-entry__separator {
+  flex: none;
+  opacity: 0.6;
+}
+
+.gs-entry__sha {
+  flex: none;
+  font-family: var(--gs-font-code);
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-entry__spacer {
+  flex: 1 1 auto;
+}
+
+.gs-entry__renamed {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  color: var(--gs-renamed-fg);
+  font-size: 11px;
+}
+
+.gs-entry__previous {
+  overflow: hidden;
+  font-family: var(--gs-font-code);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Показываем направление «было → стало», поэтому прежнее имя приглушено. */
+  opacity: 0.85;
+}
+
+/* --- ветки и теги на коммите --- */
+
+.gs-entry__refs {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.gs-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 14ch;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-size: 10px;
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.gs-ref--head {
+  color: var(--vscode-charts-blue, #3794ff);
+  font-weight: 600;
+}
+
+.gs-ref--branch {
+  color: var(--vscode-charts-blue, #3794ff);
+}
+
+.gs-ref--remote {
+  color: var(--vscode-charts-purple, #b180d7);
+}
+
+.gs-ref--tag {
+  color: var(--vscode-charts-yellow, #cca700);
+}
+
+.gs-ref--more {
+  color: var(--gs-fg-muted);
+}

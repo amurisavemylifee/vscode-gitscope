@@ -1,0 +1,151 @@
+import { buildSplitRows, type SplitRow } from '@shared/diff/splitRows';
+import type { FileVersion, HistoryEntry } from '@shared/historyModel';
+import type { DiffLine, FilePatch, Hunk, ViewMode } from '@shared/model';
+import { plural } from '@shared/time';
+import { HUNK_ROW_HEIGHT, NOTICE_ROW_HEIGHT, type NoticeTone } from '../diff/rows';
+import { formatBytes } from '../format';
+import type { LineTokens, PatchTokens } from '../syntax/highlighter';
+
+/**
+ * Плоский список строк правой области.
+ *
+ * Как и в панели сравнения, строки виртуализованы: файл на пятьдесят тысяч
+ * строк webview не переживёт, если отрисовать его целиком. Токены подсветки
+ * кладутся прямо в строку — искать их при отрисовке дороже, а список всё равно
+ * пересобирается, когда подсветка досчиталась.
+ */
+export type VersionRow =
+  | { readonly kind: 'notice'; readonly key: string; readonly tone: NoticeTone; readonly text: string }
+  | {
+      readonly kind: 'code';
+      readonly key: string;
+      readonly number: number;
+      readonly text: string;
+      readonly tokens?: LineTokens;
+    }
+  | { readonly kind: 'hunk'; readonly key: string; readonly hunk: Hunk }
+  | { readonly kind: 'line'; readonly key: string; readonly line: DiffLine; readonly tokens?: LineTokens }
+  | {
+      readonly kind: 'split';
+      readonly key: string;
+      readonly row: SplitRow;
+      readonly leftTokens?: LineTokens;
+      readonly rightTokens?: LineTokens;
+    };
+
+export function versionRowHeight(row: VersionRow, lineHeight: number): number {
+  switch (row.kind) {
+    case 'notice':
+      return NOTICE_ROW_HEIGHT;
+    case 'hunk':
+      return HUNK_ROW_HEIGHT;
+    case 'code':
+      return lineHeight;
+    case 'line':
+      return row.line.noNewlineAtEof ? lineHeight * 2 : lineHeight;
+    case 'split':
+      return row.row.left?.line.noNewlineAtEof || row.row.right?.line.noNewlineAtEof ? lineHeight * 2 : lineHeight;
+  }
+}
+
+/** Файл целиком на выбранной версии. */
+export function buildContentRows(version: FileVersion, tokens: readonly LineTokens[] | undefined): VersionRow[] {
+  if (version.missing) {
+    return [notice('muted', 'В этой версии файла нет: этот коммит его и удалил.')];
+  }
+  if (version.binary) {
+    return [notice('muted', `Двоичный файл: ${formatBytes(version.bytes)}. Показать его текстом нельзя.`)];
+  }
+
+  const rows: VersionRow[] = [];
+  if (version.truncated) {
+    rows.push(notice('warning', 'Файл слишком большой: показано только его начало.'));
+  }
+  // Подсветка приходит позже самого содержимого и на огромных файлах не
+  // приходит вовсе — строки от этого не ждут, а рисуются обычным текстом.
+  version.lines.forEach((text, index) => {
+    rows.push({
+      kind: 'code',
+      key: `code:${index}`,
+      number: index + 1,
+      text,
+      ...(tokens?.[index] ? { tokens: tokens[index] } : {}),
+    });
+  });
+
+  return rows;
+}
+
+/** Что версия изменила по сравнению с предыдущей. */
+export function buildPatchRows(
+  patch: FilePatch,
+  tokens: PatchTokens | undefined,
+  viewMode: ViewMode,
+  entry: HistoryEntry,
+): VersionRow[] {
+  if (entry.untracked === true) {
+    return [notice('muted', 'Файла ещё нет в git — сравнивать эту версию не с чем.')];
+  }
+  if (patch.binary) {
+    return [notice('muted', 'Двоичный файл: показать разницу построчно нельзя.')];
+  }
+  if (patch.hunks.length === 0) {
+    return [
+      notice(
+        'muted',
+        entry.status === 'renamed' || entry.status === 'copied'
+          ? 'Содержимое не изменилось — поменялся только путь.'
+          : 'Содержимое не изменилось.',
+      ),
+    ];
+  }
+
+  const rows: VersionRow[] = [];
+
+  if (patch.truncated) {
+    const lineCount = patch.hunks.reduce((total, hunk) => total + hunk.lines.length, 0);
+    rows.push(
+      notice(
+        'warning',
+        `Изменения слишком велики: показаны первые ${lineCount} ${plural(lineCount, ['строка', 'строки', 'строк'])}, остальное обрезано.`,
+      ),
+    );
+  }
+
+  patch.hunks.forEach((hunk, hunkIndex) => {
+    rows.push({ kind: 'hunk', key: `hunk:${hunkIndex}`, hunk });
+    const hunkTokens = tokens?.hunks[hunkIndex];
+
+    if (viewMode === 'split') {
+      buildSplitRows(hunk.lines).forEach((row, rowIndex) => {
+        const leftTokens = row.left ? hunkTokens?.[row.left.index] : undefined;
+        const rightTokens = row.right ? hunkTokens?.[row.right.index] : undefined;
+        rows.push({
+          kind: 'split',
+          key: `split:${hunkIndex}:${rowIndex}`,
+          row,
+          ...(leftTokens ? { leftTokens } : {}),
+          ...(rightTokens ? { rightTokens } : {}),
+        });
+      });
+      return;
+    }
+
+    hunk.lines.forEach((line, lineIndex) => {
+      const lineTokens = hunkTokens?.[lineIndex];
+      rows.push({
+        kind: 'line',
+        key: `line:${hunkIndex}:${lineIndex}`,
+        line,
+        ...(lineTokens ? { tokens: lineTokens } : {}),
+      });
+    });
+  });
+
+  return rows;
+}
+
+const notice = (tone: NoticeTone, text: string): VersionRow => ({ kind: 'notice', key: `notice:${text}`, tone, text });
+
+/** Единственная служебная строка вместо содержимого: «загружаем», «не вышло». */
+export const noticeRows = (tone: NoticeTone, text: string): VersionRow[] => [notice(tone, text)];

@@ -21,6 +21,22 @@ const STATUS_BY_LETTER: Record<string, ChangeStatus> = {
 };
 
 /**
+ * Разбирает код статуса: буква изменения и необязательный процент схожести
+ * (`M`, `R100`, `C075`).
+ *
+ * Одна и та же запись встречается и в `--name-status`, и в последнем поле
+ * `--raw`, поэтому разбор вынесен отдельно.
+ */
+export function parseStatusCode(raw: string): { status: ChangeStatus; similarity?: number } {
+  const letter = raw[0] ?? '';
+  const score = Number.parseInt(raw.slice(1), 10);
+  // Неизвестная буква статуса (например, U при конфликте слияния) не должна
+  // прятать файл из списка — показываем его как изменённый.
+  const status = STATUS_BY_LETTER[letter] ?? 'modified';
+  return Number.isFinite(score) ? { status, similarity: score } : { status };
+}
+
+/**
  * Разбирает вывод `git diff --name-status -z -M -C <base> <compare>`.
  *
  * Формат с `-z`: записи разделены NUL, обычная запись — это два поля
@@ -44,11 +60,7 @@ export function parseNameStatus(output: string): NameStatusEntry[] {
       continue;
     }
 
-    const letter = rawStatus[0] ?? '';
-    const score = rawStatus.slice(1);
-    // Неизвестная буква статуса (например, U при конфликте слияния) не должна
-    // прятать файл из списка — показываем его как изменённый.
-    const status = STATUS_BY_LETTER[letter] ?? 'modified';
+    const { status, similarity } = parseStatusCode(rawStatus);
     const needsTwoPaths = status === 'renamed' || status === 'copied';
 
     const firstPath = fields[index];
@@ -68,12 +80,11 @@ export function parseNameStatus(output: string): NameStatusEntry[] {
       throw new GitParseError('У записи о переименовании нет второго пути', `${rawStatus} ${firstPath}`);
     }
 
-    const similarity = score === '' ? undefined : Number.parseInt(score, 10);
     entries.push({
       status,
       path: secondPath,
       previousPath: firstPath,
-      ...(similarity !== undefined && Number.isFinite(similarity) ? { similarity } : {}),
+      ...(similarity !== undefined ? { similarity } : {}),
     });
   }
 

@@ -31,9 +31,15 @@ export class RepositoryLocator {
     const executor = await this.getExecutor();
     const api = await getBuiltInGitApi();
 
-    const roots = api
-      ? api.repositories.map((repository) => repository.rootUri.fsPath)
-      : (vscode.workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath);
+    // Пустой список у живого API — это не «репозиториев нет», а «оно ещё
+    // сканирует воркспейс»: сразу после запуска окна команда иначе падала бы с
+    // тем же сообщением, что и в папке без git. Папки воркспейса всё равно
+    // проверяются через rev-parse, так что выдумать репозиторий этот запасной
+    // путь не может.
+    const roots =
+      api && api.repositories.length > 0
+        ? api.repositories.map((repository) => repository.rootUri.fsPath)
+        : (vscode.workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath);
 
     const repositories: GitRepository[] = [];
     const seen = new Set<string>();

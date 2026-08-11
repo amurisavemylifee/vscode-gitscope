@@ -1,7 +1,9 @@
 import { stat } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
+import type { ChangeStatus } from '@shared/model';
 import type { GitExecutor } from './GitExecutor';
 import { GitError, RevisionNotFoundError } from './errors';
+import { FILE_LOG_FORMAT, parseFileLog, type FileLogCommit } from './parsers/parseFileLog';
 import { LOG_FORMAT, parseLog } from './parsers/parseLog';
 import { parseNameStatus, type NameStatusEntry } from './parsers/parseNameStatus';
 import { parseNumstat, type NumstatEntry } from './parsers/parseNumstat';
@@ -24,6 +26,32 @@ export interface ListCommitsOptions extends AbortOption {
 export interface PatchOptions extends AbortOption {
   readonly contextLines?: number;
   readonly maxBytes?: number;
+}
+
+export interface FileHistoryOptions extends AbortOption {
+  readonly limit?: number;
+  /** Откуда начинать обход истории. По умолчанию — текущая ветка. */
+  readonly revision?: string;
+}
+
+export interface ReadFileOptions extends AbortOption {
+  readonly maxBytes?: number;
+}
+
+/** Содержимое файла на ревизии. */
+export interface FileContent {
+  /** Пусто у двоичного файла: декодировать его как UTF-8 бессмысленно. */
+  readonly text: string;
+  readonly truncated: boolean;
+  readonly binary: boolean;
+  readonly bytes: number;
+}
+
+/** Состояние файла в рабочем дереве относительно HEAD. */
+export interface WorktreeChange {
+  readonly status: ChangeStatus;
+  /** Файла нет в git вовсе, поэтому и diff с HEAD у него не существует. */
+  readonly untracked: boolean;
 }
 
 export interface PatchResult {
@@ -159,6 +187,134 @@ export class GitRepository {
     return { files: parseUnifiedDiff(stdout.toString('utf8')), truncated };
   }
 
+  /**
+   * История одного файла — коммиты, которые его меняли.
+   *
+   * `--follow` ведёт историю через переименования: без него она обрывается на
+   * коммите, где файл сменил имя, и половина прошлого просто исчезает.
+   *
+   * Следующая страница берётся не через `--skip`, а сдвигом `revision` к
+   * родителю последнего показанного коммита: пропущенные коммиты `--follow` не
+   * разбирает, и если в пропуск попал сам коммит переименования, история под
+   * ним теряется целиком.
+   */
+  async listFileHistory(
+    path: string,
+    { limit = 60, revision = 'HEAD', signal }: FileHistoryOptions = {},
+  ): Promise<FileLogCommit[]> {
+    const output = await this.git.text(
+      [
+        'log',
+        '--follow',
+        `--format=${FILE_LOG_FORMAT}`,
+        // --raw даёт статус, --numstat — числа строк; вместе они работают, в
+        // отличие от пары --name-status и --numstat, где побеждает последний.
+        '--raw',
+        '--numstat',
+        '-z',
+        '--no-color',
+        '--no-ext-diff',
+        '--no-textconv',
+        `--max-count=${limit}`,
+        revision,
+        '--',
+        path,
+      ],
+      { cwd: this.root, ...(signal ? { signal } : {}) },
+    );
+    return parseFileLog(output);
+  }
+
+  /** Родитель коммита; `undefined` у самого первого коммита в истории. */
+  async firstParent(sha: string, options: AbortOption = {}): Promise<string | undefined> {
+    try {
+      const parent = await this.git.line(['rev-parse', '--verify', '--quiet', `${sha}^`], {
+        cwd: this.root,
+        ...options,
+      });
+      return parent === '' ? undefined : parent;
+    } catch (error) {
+      // У корневого коммита родителя нет, и git выходит с ненулевым кодом.
+      // Это не поломка, а ответ «нет».
+      if (error instanceof GitError) {
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Что рабочее дерево делает с файлом по сравнению с HEAD.
+   *
+   * `undefined` — файл совпадает с HEAD, показывать отдельную версию «рабочая
+   * копия» не о чем.
+   */
+  async worktreeChange(path: string, options: AbortOption = {}): Promise<WorktreeChange | undefined> {
+    const output = await this.git.text(['status', '--porcelain', '-z', '--', path], {
+      cwd: this.root,
+      ...options,
+    });
+    // Запись с -z: две буквы состояния, пробел и путь. Первой идёт интересующий
+    // нас файл — пути к другим сюда попасть не могут, git отфильтровал их сам.
+    const record = output.split('\0').find((entry) => entry !== '');
+    if (record === undefined) {
+      return undefined;
+    }
+
+    const code = record.slice(0, 2);
+    if (code === '??') {
+      return { status: 'added', untracked: true };
+    }
+    if (code.includes('D')) {
+      return { status: 'deleted', untracked: false };
+    }
+    if (code.includes('A')) {
+      return { status: 'added', untracked: false };
+    }
+    return { status: 'modified', untracked: false };
+  }
+
+  /** Количества изменённых строк между HEAD и рабочим деревом. */
+  async diffWorktreeNumstat(path: string, options: AbortOption = {}): Promise<NumstatEntry[]> {
+    const output = await this.git.text([...this.diffBaseArgs(), '--numstat', '-z', 'HEAD', '--', path], {
+      cwd: this.root,
+      ...options,
+    });
+    return parseNumstat(output);
+  }
+
+  /** Патч между HEAD и рабочим деревом — то, что ещё не попало в git. */
+  async diffWorktreePatch(
+    path: string,
+    { contextLines = 3, maxBytes, signal }: PatchOptions = {},
+  ): Promise<PatchResult> {
+    const { stdout, truncated } = await this.git.run(
+      [...this.diffBaseArgs(), '--patch', `--unified=${contextLines}`, 'HEAD', '--', path],
+      {
+        cwd: this.root,
+        ...(maxBytes !== undefined ? { maxBytes } : {}),
+        ...(signal ? { signal } : {}),
+      },
+    );
+    return { files: parseUnifiedDiff(stdout.toString('utf8')), truncated };
+  }
+
+  /**
+   * Содержимое файла на ревизии целиком.
+   *
+   * В отличие от `showFileLines` умеет останавливаться на пределе размера и
+   * распознавать двоичный файл: панель истории показывает файл целиком, и
+   * гигабайтный дамп в webview отправлять нельзя.
+   */
+  async readFile(revision: string, path: string, { maxBytes, signal }: ReadFileOptions = {}): Promise<FileContent> {
+    const { stdout, truncated } = await this.git.run(['show', `${revision}:${path}`], {
+      cwd: this.root,
+      ...(maxBytes !== undefined ? { maxBytes } : {}),
+      ...(signal ? { signal } : {}),
+    });
+    return describeContent(stdout, truncated);
+  }
+
   /** Содержимое файла на ревизии, разбитое на строки. */
   async showFileLines(revision: string, path: string, options: AbortOption = {}): Promise<string[]> {
     const text = await this.git.text(['show', `${revision}:${path}`], { cwd: this.root, ...options });
@@ -221,4 +377,25 @@ export class GitRepository {
   private diffBaseArgs(): string[] {
     return ['diff', '--no-color', '--no-ext-diff', '--no-textconv', '-M', '-C'];
   }
+}
+
+/** Сколько байт от начала файла нюхать в поисках нуля. Столько же смотрит сам git. */
+const BINARY_SNIFF_BYTES = 8000;
+
+/**
+ * Описывает прочитанный файл: текст, размер и двоичный он или нет.
+ *
+ * Признак двоичности — нулевой байт в начале файла: та же эвристика, по которой
+ * git решает печатать «Binary files differ» вместо патча. Экспортируется, потому
+ * что файл рабочей копии читается с диска, а не через git, а трактовать
+ * содержимое надо одинаково.
+ */
+export function describeContent(bytes: Buffer, truncated: boolean): FileContent {
+  const binary = bytes.subarray(0, BINARY_SNIFF_BYTES).includes(0);
+  return {
+    text: binary ? '' : bytes.toString('utf8'),
+    truncated,
+    binary,
+    bytes: bytes.length,
+  };
 }

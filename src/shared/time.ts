@@ -25,6 +25,24 @@ export function plural(count: number, forms: readonly [string, string, string]):
   return forms[2];
 }
 
+const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+/**
+ * «12 авг 2026, 01:19» из ISO-строки.
+ *
+ * Поля берутся из строки как есть, без `Date`: git пишет время в таймзоне
+ * автора, и коммит, сделанный в Токио в полдень, должен остаться полуднем, а не
+ * превратиться в ночь по часам смотрящего.
+ */
+export function formatDateTime(iso: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso);
+  if (!match) {
+    return '';
+  }
+  const [, year, month, day, hour, minute] = match as unknown as [string, string, string, string, string, string];
+  return `${Number.parseInt(day, 10)} ${MONTHS[Number.parseInt(month, 10) - 1] ?? month} ${year}, ${hour}:${minute}`;
+}
+
 /**
  * «3 минуты назад», «вчера», «2 месяца назад».
  *
