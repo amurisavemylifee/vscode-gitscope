@@ -428,3 +428,91 @@ describe('FileHistoryService: взгляд с ветки на старый ко�
     ]);
   });
 });
+
+/**
+ * Третий сценарий из отчёта: файл переименовали по-разному в двух ветках.
+ *
+ *   main:  c1 создание orig.ts ── c2 правка
+ *              ├─ branch-a: переименование в a-name.ts ── правка
+ *              └─ branch-b: переименование в b-name.ts ── правка
+ *
+ * Общего имени у веток нет: на A файл зовут одним именем, на B другим, и ни
+ * одно из них не встречается в чужой ветке. Найти файл можно только отойдя
+ * назад до имени, которое было до обоих переездов, и уже от него пойдя вперёд.
+ */
+describe('FileHistoryService: разные переименования в двух ветках', () => {
+  let repo: TestRepo;
+  const origPath = 'some-folder/orig.ts';
+  const pathOnA = 'some-folder/a-name.ts';
+  const pathOnB = 'some-folder/b-name.ts';
+
+  /** Панель открыта на ветке A, поэтому знает файл под её именем. */
+  const service = async () =>
+    new FileHistoryService(await GitRepository.open(repo.root, new GitExecutor()), pathOnA);
+
+  beforeAll(() => {
+    repo = TestRepo.create();
+
+    repo.write(origPath, 'строка1\n');
+    repo.commit('создание orig.ts');
+    repo.write(origPath, 'строка1\nстрока2\n');
+    repo.commit('правка на main');
+
+    repo.checkout('branch-a', true);
+    repo.git('mv', origPath, pathOnA);
+    repo.commit('переименование в a-name');
+    repo.write(pathOnA, 'строка1\nстрока2\nстрока3\n');
+    repo.commit('правка на ветке A');
+
+    repo.checkout('main');
+    repo.checkout('branch-b', true);
+    repo.git('mv', origPath, pathOnB);
+    repo.commit('переименование в b-name');
+    repo.write(pathOnB, 'строка1\nстрока2\nстрока9\n');
+    repo.commit('правка на ветке B');
+
+    repo.checkout('branch-a');
+  });
+
+  afterAll(() => repo.dispose());
+
+  it('находит файл в чужой ветке под её собственным именем', async () => {
+    const { entries } = await (await service()).page('branch-b', undefined);
+
+    expect(entries.map((entry) => entry.subject)).toEqual([
+      'правка на ветке B',
+      'переименование в b-name',
+      'правка на main',
+      'создание orig.ts',
+    ]);
+    expect(entries[0]?.path).toBe(pathOnB);
+  });
+
+  it('содержимое версии из чужой ветки читается по её пути', async () => {
+    const instance = await service();
+    const { entries } = await instance.page('branch-b', undefined);
+
+    const version = await instance.version(entries[0] as HistoryEntry);
+
+    expect(version.path).toBe(pathOnB);
+    expect(version.lines).toEqual(['строка1', 'строка2', 'строка9']);
+  });
+
+  it('на общем предке двух веток файл находится под изначальным именем', async () => {
+    const { entries } = await (await service()).page('main', undefined);
+
+    expect(entries.map((entry) => entry.subject)).toEqual(['правка на main', 'создание orig.ts']);
+    expect(entries.every((entry) => entry.path === origPath)).toBe(true);
+  });
+
+  it('своя ветка от этого не пострадала', async () => {
+    const { entries } = await (await service()).page('branch-a', undefined);
+
+    expect(entries.map((entry) => entry.subject)).toEqual([
+      'правка на ветке A',
+      'переименование в a-name',
+      'правка на main',
+      'создание orig.ts',
+    ]);
+  });
+});

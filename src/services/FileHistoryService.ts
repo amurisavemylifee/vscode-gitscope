@@ -254,22 +254,37 @@ export class FileHistoryService {
    * git про сегодняшний путь в таком случае бессмысленно: истории по нему там
    * нет, и панель скажет «файл ни разу не попадал в коммиты», хотя файл тот же.
    *
-   * Искать приходится в обе стороны. Ревизия новее переименования — имя надо
-   * вести вперёд, к тому, во что файл переехал. Ревизия старше — назад, к тому,
-   * как он назывался тогда.
+   * Искать приходится в обе стороны и обе уметь сочетать. Ревизия новее
+   * переименования — имя ведём вперёд, к тому, во что файл переехал. Ревизия
+   * старше — назад, к тому, как он назывался тогда. А если файл переименовали
+   * по-разному в двух ветках, общего имени у веток нет вовсе: надо отойти назад
+   * до имени, которое было до обоих переездов, и от него пойти вперёд уже по
+   * выбранной ветке.
    */
   private async pathAt(revision: string, options: { signal?: AbortSignal }): Promise<string> {
     if (await this.repository.hasPath(revision, this.path, options)) {
       return this.path;
     }
     return (
-      (await this.pathRenamedTo(revision, options)) ?? (await this.pathRenamedFrom(revision, options)) ?? this.path
+      (await this.pathRenamedTo(revision, this.path, options)) ??
+      (await this.pathRenamedFrom(revision, options)) ??
+      this.path
     );
   }
 
-  /** Во что переехал файл по пути к этой ревизии: она новее переименования. */
-  private async pathRenamedTo(revision: string, options: { signal?: AbortSignal }): Promise<string | undefined> {
-    let current = this.path;
+  /**
+   * Во что переехало имя `start` по пути к этой ревизии.
+   *
+   * `undefined` — такого пути в её истории не было вовсе. Если же файл по нему
+   * был и его просто удалили, возвращается само имя: история до удаления — это
+   * ровно то, что нужно показать.
+   */
+  private async pathRenamedTo(
+    revision: string,
+    start: string,
+    options: { signal?: AbortSignal },
+  ): Promise<string | undefined> {
+    let current = start;
 
     for (let hop = 0; hop < MAX_RENAME_HOPS; hop += 1) {
       const removedAt = await this.repository.lastCommitRemoving(revision, current, options);
@@ -280,9 +295,7 @@ export class FileHistoryService {
         (entry) => entry.previousPath === current,
       )?.path;
       if (renamedTo === undefined) {
-        // Не переименование, а настоящее удаление: показывать историю этого
-        // пути до коммита, где файл исчез, — правильный ответ.
-        return undefined;
+        return current;
       }
       if (await this.repository.hasPath(revision, renamedTo, options)) {
         return renamedTo;
@@ -324,6 +337,12 @@ export class FileHistoryService {
       }
       if (await this.repository.hasPath(revision, renamedFrom, options)) {
         return renamedFrom;
+      }
+      // Прежнее имя до выбранной ревизии тоже не дожило: в её ветке файл
+      // переименовали по-своему. Идём от общего имени вперёд, но уже по ней.
+      const renamedThere = await this.pathRenamedTo(revision, renamedFrom, options);
+      if (renamedThere !== undefined) {
+        return renamedThere;
       }
       current = renamedFrom;
       from = parent;
