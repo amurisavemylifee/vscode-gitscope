@@ -244,10 +244,17 @@
   background: color-mix(in srgb, var(--gs-accent) 7%, transparent);
   border-top: 1px solid color-mix(in srgb, var(--gs-border) 60%, transparent);
   border-bottom: 1px solid color-mix(in srgb, var(--gs-border) 60%, transparent);
+  /* Кегль как у кода: ширина полосы задана в ch, а ch считается по шрифту
+     самого элемента. В интерфейсном шрифте нолик шире моноширинного, и полоса
+     вылезала бы за самую длинную строку — прокруткой в пустоту. */
+  font-family: var(--gs-font-code);
+  font-size: var(--gs-font-size-code);
 }
 
+/* Текст кнопок остаётся интерфейсным: это подпись, а не код. */
 .gs-expander > .gs-diff__sticky {
   gap: var(--gs-space-2);
+  font-family: var(--gs-font-ui);
 }
 
 .gs-expander__button {
