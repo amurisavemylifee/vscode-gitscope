@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ComparisonSummary, FileChange } from '@shared/model';
+import type { ComparisonSummary, FileChange, FilePatch } from '@shared/model';
 import type { PanelState } from '@shared/protocol';
 
 const request = vi.fn();
@@ -56,9 +56,19 @@ const state = (overrides: Partial<PanelState> = {}): PanelState => ({
 
 /** Ответы на разные методы канала: панель зовёт несколько за время рендера. */
 const respondWith = (panelState: PanelState) => {
-  request.mockImplementation((method: string) => {
+  request.mockImplementation((method: string, payload?: { path?: string }) => {
     if (method === 'panel/ready') {
       return Promise.resolve(panelState);
+    }
+    if (method === 'comparison/patch') {
+      const patch: FilePatch = {
+        path: payload?.path ?? '',
+        status: 'modified',
+        binary: false,
+        hunks: [],
+        truncated: false,
+      };
+      return Promise.resolve(patch);
     }
     return Promise.resolve(null);
   });
@@ -220,6 +230,15 @@ describe('App', () => {
     expect(screen.getByText('a.ts')).toBeInTheDocument();
     expect(screen.getByText('main')).toBeInTheDocument();
     expect(screen.getByText('feature')).toBeInTheDocument();
+  });
+
+  it('раскладывает файлы на полотне в порядке дерева, а не в порядке git', async () => {
+    respondWith(state({ summary: summary([file('README.md'), file('src/a.ts')]) }));
+    const { container } = render(<App />);
+
+    await screen.findByText('2 изменённых файла');
+    // Первый файл дерева — из папки: папки идут выше файлов корня.
+    expect(container.querySelector('.gs-file-header__name')?.textContent).toBe('src/a.ts');
   });
 
   it('во время подсчёта сравнения не предлагает выбирать ревизии заново', async () => {

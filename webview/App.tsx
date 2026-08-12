@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ViewMode } from '@shared/model';
+import { buildFileTree, flattenFileTree } from '@shared/fileTree';
+import type { FileChange, ViewMode } from '@shared/model';
 import { plural } from '@shared/time';
 import { actions } from './api/actions';
 import { persistedState } from './api/bridge';
@@ -64,7 +65,13 @@ export function App() {
     setExpanded((previous) => new Set(previous).add(path));
   }, []);
 
-  const files = useMemo(() => summary?.files ?? [], [summary]);
+  // Порядок правой области — порядок дерева слева: клик по нижнему файлу
+  // прокручивает вниз, а соседи по дереву оказываются соседями и на полотне.
+  const files = useMemo(() => {
+    const changes = summary?.files ?? [];
+    const tree = buildFileTree(changes.map((change) => change.path));
+    return flattenFileTree(tree).map((node) => changes[node.index] as FileChange);
+  }, [summary]);
 
   const selectFile = useCallback(
     (path: string) => {

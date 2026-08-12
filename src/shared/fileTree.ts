@@ -60,6 +60,27 @@ export function buildFileTree(paths: readonly string[]): FileTreeNode[] {
   return toNodes(root, '');
 }
 
+/**
+ * Файлы дерева в том порядке, в каком они видны сверху вниз: папки раскрыты,
+ * вложенные идут сразу под своей папкой.
+ */
+export function flattenFileTree(nodes: readonly FileTreeNode[]): FileTreeFileNode[] {
+  const files: FileTreeFileNode[] = [];
+
+  const walk = (level: readonly FileTreeNode[]) => {
+    for (const node of level) {
+      if (node.kind === 'file') {
+        files.push(node);
+      } else {
+        walk(node.children);
+      }
+    }
+  };
+  walk(nodes);
+
+  return files;
+}
+
 function toNodes(directory: MutableDirectory, prefix: string): FileTreeNode[] {
   const directories: FileTreeDirectoryNode[] = [];
 

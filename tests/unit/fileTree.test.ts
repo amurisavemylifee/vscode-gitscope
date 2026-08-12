@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFileTree, type FileTreeNode } from '@shared/fileTree';
+import { buildFileTree, flattenFileTree, type FileTreeNode } from '@shared/fileTree';
 
 /** Компактная запись дерева для сравнений: `имя` для файла, `имя/[...]` для папки. */
 function outline(nodes: readonly FileTreeNode[]): unknown[] {
@@ -59,5 +59,28 @@ describe('buildFileTree', () => {
 
   it('на пустом списке отдаёт пустое дерево', () => {
     expect(buildFileTree([])).toEqual([]);
+  });
+});
+
+describe('flattenFileTree', () => {
+  it('перечисляет файлы так, как они видны сверху вниз', () => {
+    const tree = buildFileTree(['README.md', 'src/b.ts', 'src/a.ts', 'docs/guide.md']);
+
+    expect(flattenFileTree(tree).map((node) => node.path)).toEqual([
+      'docs/guide.md',
+      'src/a.ts',
+      'src/b.ts',
+      'README.md',
+    ]);
+  });
+
+  it('оставляет при файле индекс исходного пути', () => {
+    const tree = buildFileTree(['src/z.ts', 'a.txt']);
+
+    expect(flattenFileTree(tree).map((node) => node.index)).toEqual([0, 1]);
+  });
+
+  it('на пустом дереве отдаёт пустой список', () => {
+    expect(flattenFileTree([])).toEqual([]);
   });
 });
