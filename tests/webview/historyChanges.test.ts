@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { HistoryEntry } from '@shared/historyModel';
 import type { DiffLine, FilePatch, Hunk } from '@shared/model';
-import { changeAtOffset, collectChanges, wrapChangeIndex } from '../../webview/history/changes';
+import { changeAtOffset, collectChanges, NO_CHANGES, wrapChangeIndex } from '../../webview/history/changes';
 import { buildPatchRows } from '../../webview/history/rows';
 
 const LINE = 20;
@@ -107,23 +107,52 @@ describe('collectChanges', () => {
 });
 
 describe('changeAtOffset', () => {
-  const blocks = collectChanges(
+  // Четыре строки, изменения на первой и последней; окно — в одну строку,
+  // чтобы до конца файла было дальше экрана и поправка на хвост не мешала.
+  const changes = collectChanges(
     rowsOf([insert('первая', 1), context('вторая', 2), context('третья', 3), insert('четвёртая', 4)]),
     LINE,
-  ).blocks;
+  );
 
   it('пока изменение не уехало за верхний край, счётчик стоит на нём', () => {
-    expect(changeAtOffset(blocks, 0)).toBe(0);
-    expect(changeAtOffset(blocks, LINE - 1)).toBe(0);
+    expect(changeAtOffset(changes, 0, LINE)).toBe(0);
+    expect(changeAtOffset(changes, LINE - 1, LINE)).toBe(0);
   });
 
   it('уехало — счётчик переходит к следующему', () => {
-    expect(changeAtOffset(blocks, LINE)).toBe(1);
+    expect(changeAtOffset(changes, LINE, LINE)).toBe(1);
   });
 
   it('ниже последнего изменения остаётся на нём, а не срывается за список', () => {
-    expect(changeAtOffset(blocks, 10_000)).toBe(blocks.length - 1);
-    expect(changeAtOffset([], 0)).toBe(0);
+    expect(changeAtOffset(changes, 10_000, LINE)).toBe(changes.blocks.length - 1);
+    expect(changeAtOffset(NO_CHANGES, 0, LINE)).toBe(0);
+  });
+
+  it('внизу файла доходит до последнего изменения, а не стоит на первом видимом', () => {
+    // Десять строк, изменения на первой, шестой, восьмой и десятой: три
+    // последних помещаются на экран разом, и верхний край до них не дотянется.
+    const tail = collectChanges(
+      rowsOf([
+        insert('первая', 1),
+        context('вторая', 2),
+        context('третья', 3),
+        context('четвёртая', 4),
+        context('пятая', 5),
+        insert('шестая', 6),
+        context('седьмая', 7),
+        insert('восьмая', 8),
+        context('девятая', 9),
+        insert('десятая', 10),
+      ]),
+      LINE,
+    );
+    const viewport = LINE * 5;
+
+    expect(tail.blocks).toHaveLength(4);
+    // Прокрутка домотана до конца: ниже последнего изменения ничего нет.
+    expect(changeAtOffset(tail, tail.total - viewport, viewport)).toBe(3);
+    // На полпути к концу поправки ещё нет: счётчик идёт по верхнему краю.
+    expect(changeAtOffset(tail, LINE, viewport)).toBe(1);
   });
 });
 

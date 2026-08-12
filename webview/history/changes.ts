@@ -66,17 +66,27 @@ export function collectChanges(rows: readonly VersionRow[], lineHeight: number):
 }
 
 /**
- * Какое изменение сейчас перед глазами: первое, чей низ ещё не уехал за верхний
- * край. Счётчик в шапке иначе врал бы при обычной прокрутке.
+ * Какое изменение сейчас перед глазами: первое, чей низ ещё не уехал за точку
+ * отсчёта. Счётчик в шапке иначе врал бы при обычной прокрутке.
+ *
+ * Точка отсчёта — верхний край области, но у конца файла она съезжает вниз
+ * ровно на то, чего прокрутке уже не хватает. Последний экран верхним краем не
+ * пролистать, а изменений на нём помещается несколько: без этой поправки,
+ * домотав до конца, счётчик показывал бы «8 из 12», хотя ниже восьмого ничего
+ * не осталось. Там, где до конца ещё дальше экрана, поправки нет вовсе — иначе
+ * счётчик обгонял бы изменение, которое переход поставил под верхний край.
  */
-export function changeAtOffset(blocks: readonly ChangeBlock[], offset: number): number {
-  for (let index = 0; index < blocks.length; index += 1) {
-    const block = blocks[index];
-    if (block !== undefined && block.top + block.height > offset) {
+export function changeAtOffset(changes: Changes, offset: number, viewport: number): number {
+  const remaining = Math.max(0, changes.total - viewport - offset);
+  const anchor = offset + Math.max(0, viewport - remaining);
+
+  for (let index = 0; index < changes.blocks.length; index += 1) {
+    const block = changes.blocks[index];
+    if (block !== undefined && block.top + block.height > anchor) {
       return index;
     }
   }
-  return Math.max(0, blocks.length - 1);
+  return Math.max(0, changes.blocks.length - 1);
 }
 
 /** Следующее или предыдущее изменение по кругу: после последнего — снова первое. */

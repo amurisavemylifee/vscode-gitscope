@@ -80,10 +80,12 @@ export function VersionCanvas({
   }, [scrollTo, virtualizer]);
 
   // Счётчик в шапке следит за прокруткой, а не только за кнопками перехода.
+  // Высота видимой части нужна ему у конца файла: последний экран прокруткой
+  // уже не пролистать, а изменений на нём помещается несколько.
   const scrollOffset = virtualizer.scrollOffset ?? 0;
   useEffect(() => {
     if (changes.blocks.length > 0) {
-      onCurrentChange(changeAtOffset(changes.blocks, scrollOffset));
+      onCurrentChange(changeAtOffset(changes, scrollOffset, scrollRef.current?.clientHeight ?? 0));
     }
   }, [changes, scrollOffset, onCurrentChange]);
 
