@@ -344,17 +344,15 @@ describe('App истории', () => {
     expect(request).toHaveBeenCalledWith('history/open', { entryId: 'a'.repeat(40) });
   });
 
-  it('копирование SHA подтверждается прямо на кнопке', async () => {
+  it('копирование SHA живёт в карточке слева, а не в шапке версии', async () => {
     respondWith(state());
     render(<App />);
 
-    await userEvent.click(await screen.findByTitle('Скопировать SHA коммита'));
-
-    expect(request).toHaveBeenCalledWith('history/copySha', { entryId: 'a'.repeat(40) });
-    await screen.findByTitle('SHA скопирован');
+    await screen.findByRole('listbox', { name: 'Версии файла' });
+    expect(screen.queryByTitle('Скопировать SHA коммита')).not.toBeInTheDocument();
   });
 
-  it('у рабочей копии SHA копировать нечего', async () => {
+  it('у рабочей копии шапка версии остаётся без лишних кнопок', async () => {
     respondWith(
       state({
         entries: [

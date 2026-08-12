@@ -16,6 +16,7 @@ interface EntryListProps {
   readonly loadingMore: boolean;
   readonly onSelect: (entry: HistoryEntry) => void;
   readonly onOpen: (entry: HistoryEntry) => void;
+  readonly onCopySha: (entry: HistoryEntry) => Promise<unknown>;
   readonly onLoadMore: () => void;
 }
 
@@ -34,6 +35,7 @@ export function EntryList({
   loadingMore,
   onSelect,
   onOpen,
+  onCopySha,
   onLoadMore,
 }: EntryListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -118,6 +120,7 @@ export function EntryList({
                   first={item.index === 0}
                   last={item.index === entries.length - 1 && !hasMore}
                   onSelect={() => onSelect(entry)}
+                  onCopySha={() => onCopySha(entry)}
                 />
               ) : (
                 <div className="gs-entries__more">загружаем ещё версии…</div>

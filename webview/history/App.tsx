@@ -126,6 +126,7 @@ export function App() {
   const openEntry = useCallback((entry: HistoryEntry) => {
     void actions.openVersion(entry.id).catch(() => undefined);
   }, []);
+  const copySha = useCallback((entry: HistoryEntry) => actions.copySha(entry.id), []);
 
   const header = (
     <HistoryHeader
@@ -199,6 +200,7 @@ export function App() {
             loadingMore={loadingMore}
             onSelect={selectEntry}
             onOpen={openEntry}
+            onCopySha={copySha}
             onLoadMore={loadMore}
           />
         </aside>
@@ -219,7 +221,6 @@ export function App() {
             onModeChange={changeVersionMode}
             onViewModeChange={changeViewMode}
             onOpen={() => selected && openEntry(selected)}
-            onCopySha={() => (selected ? actions.copySha(selected.id) : Promise.resolve())}
           />
           <VersionCanvas
             rows={rows}

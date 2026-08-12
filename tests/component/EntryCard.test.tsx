@@ -22,7 +22,15 @@ const commit = (overrides: Partial<HistoryEntry> = {}): HistoryEntry => ({
 
 const renderCard = (entry: HistoryEntry, overrides: Partial<Parameters<typeof EntryCard>[0]> = {}) =>
   render(
-    <EntryCard entry={entry} selected={false} first={false} last={false} onSelect={() => undefined} {...overrides} />,
+    <EntryCard
+      entry={entry}
+      selected={false}
+      first={false}
+      last={false}
+      onSelect={() => undefined}
+      onCopySha={() => Promise.resolve()}
+      {...overrides}
+    />,
   );
 
 describe('EntryCard', () => {
@@ -82,21 +90,30 @@ describe('EntryCard', () => {
     expect(screen.queryByText('+12')).not.toBeInTheDocument();
   });
 
-  it('показывает ветки и теги, а лишние прячет под счётчик', () => {
-    renderCard(
-      commit({
-        refs: [
-          { kind: 'head', name: 'main' },
-          { kind: 'tag', name: 'v1.0' },
-          { kind: 'remote', name: 'origin/main' },
-        ],
-      }),
-    );
+  it('копирует SHA по клику на него, не трогая выбор версии', async () => {
+    const onCopySha = vi.fn(() => Promise.resolve());
+    const onSelect = vi.fn();
+    renderCard(commit(), { onCopySha, onSelect });
 
-    expect(screen.getByText('main')).toBeInTheDocument();
-    expect(screen.getByText('v1.0')).toBeInTheDocument();
-    expect(screen.getByText('+1')).toBeInTheDocument();
-    expect(screen.getByTitle('main, v1.0, origin/main')).toBeInTheDocument();
+    await userEvent.click(screen.getByTitle('Скопировать SHA коммита'));
+
+    expect(onCopySha).toHaveBeenCalledOnce();
+    // Клик по SHA — про буфер обмена, а не про переход к другой версии.
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('после копирования подтверждает это на самой надписи', async () => {
+    renderCard(commit());
+
+    await userEvent.click(screen.getByTitle('Скопировать SHA коммита'));
+
+    expect(await screen.findByTitle('SHA скопирован')).toHaveTextContent('aaaaaaa');
+  });
+
+  it('у рабочей копии копировать нечего', () => {
+    renderCard(commit({ id: 'working', kind: 'working' }));
+
+    expect(screen.queryByTitle('Скопировать SHA коммита')).not.toBeInTheDocument();
   });
 
   it('сообщает о выборе и отмечает выделение для чтения с экрана', async () => {

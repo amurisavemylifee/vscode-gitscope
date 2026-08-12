@@ -1,4 +1,5 @@
-import type { HistoryEntry, HistoryRef } from '@shared/historyModel';
+import { useEffect, useState } from 'react';
+import type { HistoryEntry } from '@shared/historyModel';
 import { formatDateTime, formatRelativeTime } from '@shared/time';
 import { DiffStat } from '../../components/DiffStat';
 import { Icon } from '../../components/Icon';
@@ -15,6 +16,9 @@ export const entryCardHeight = (entry: HistoryEntry): number =>
 /** Идентификатор карточки в DOM: по нему список сообщает, что сейчас выделено. */
 export const entryCardId = (entryId: string): string => `gs-entry-${entryId}`;
 
+/** Сколько держать отметку об успешном копировании. */
+const COPIED_FEEDBACK_MS = 1200;
+
 interface EntryCardProps {
   readonly entry: HistoryEntry;
   readonly selected: boolean;
@@ -22,6 +26,7 @@ interface EntryCardProps {
   readonly first: boolean;
   readonly last: boolean;
   readonly onSelect: () => void;
+  readonly onCopySha: () => Promise<unknown>;
 }
 
 /**
@@ -31,7 +36,7 @@ interface EntryCardProps {
  * коммитов: она показывает, что версии идут одной цепочкой, а не лежат
  * несвязанной кучей.
  */
-export function EntryCard({ entry, selected, first, last, onSelect }: EntryCardProps) {
+export function EntryCard({ entry, selected, first, last, onSelect, onCopySha }: EntryCardProps) {
   const working = entry.kind === 'working';
 
   // У слияния git не печатает diff по файлу, поэтому чисел строк нет — нули
@@ -57,13 +62,7 @@ export function EntryCard({ entry, selected, first, last, onSelect }: EntryCardP
     .join(' ');
 
   return (
-    <div
-      className={classes}
-      id={entryCardId(entry.id)}
-      role="option"
-      aria-selected={selected}
-      onClick={onSelect}
-    >
+    <div className={classes} id={entryCardId(entry.id)} role="option" aria-selected={selected} onClick={onSelect}>
       <span className="gs-entry__rail" aria-hidden="true">
         <span className="gs-entry__dot" />
       </span>
@@ -93,15 +92,14 @@ export function EntryCard({ entry, selected, first, last, onSelect }: EntryCardP
               <span className="gs-entry__when">{formatRelativeTime(entry.authoredAt ?? '')}</span>
             </>
           )}
-          {entry.refs?.length ? <Refs refs={entry.refs} /> : null}
         </div>
 
         <div className="gs-entry__row gs-entry__row--meta">
           {working ? (
-            <span className="gs-entry__sha">на диске</span>
+            <span className="gs-entry__sha-text">на диске</span>
           ) : (
             <>
-              <span className="gs-entry__sha">{entry.shortSha}</span>
+              <CopyShaButton shortSha={entry.shortSha ?? ''} onCopy={onCopySha} />
               <span className="gs-entry__separator">·</span>
               <span className="gs-entry__when">{formatDateTime(entry.authoredAt ?? '')}</span>
             </>
@@ -114,20 +112,37 @@ export function EntryCard({ entry, selected, first, last, onSelect }: EntryCardP
   );
 }
 
-/** Ветки и теги, указывающие на коммит. Больше двух в карточку не влезает. */
-function Refs({ refs }: { readonly refs: readonly HistoryRef[] }) {
-  const shown = refs.slice(0, 2);
-  const hidden = refs.length - shown.length;
+/**
+ * Короткий SHA, он же кнопка копирования.
+ *
+ * Отдельной кнопки под это нет намеренно: SHA — единственное, что отсюда
+ * копируют, и щёлкать удобнее по самой надписи. Значок рядом проявляется под
+ * курсором, но место занимает всегда — иначе строка дёргалась бы при наведении.
+ */
+function CopyShaButton({ shortSha, onCopy }: { readonly shortSha: string; readonly onCopy: () => Promise<unknown> }) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) {
+      return;
+    }
+    const timer = setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
+    return () => clearTimeout(timer);
+  }, [copied]);
 
   return (
-    <span className="gs-entry__refs" title={refs.map((ref) => ref.name).join(', ')}>
-      {shown.map((ref) => (
-        <span key={`${ref.kind}:${ref.name}`} className={`gs-ref gs-ref--${ref.kind}`}>
-          <Icon name={ref.kind === 'tag' ? 'tag' : ref.kind === 'remote' ? 'remote' : 'branch'} size={10} />
-          {ref.name}
-        </span>
-      ))}
-      {hidden > 0 ? <span className="gs-ref gs-ref--more">+{hidden}</span> : null}
-    </span>
+    <button
+      type="button"
+      className={`gs-entry__sha${copied ? ' gs-entry__sha--copied' : ''}`}
+      title={copied ? 'SHA скопирован' : 'Скопировать SHA коммита'}
+      onClick={(event) => {
+        // Клик по SHA — про буфер обмена, а не про выбор версии.
+        event.stopPropagation();
+        void onCopy().then(() => setCopied(true));
+      }}
+    >
+      {shortSha}
+      <Icon name={copied ? 'check' : 'copy'} size={10} className="gs-entry__sha-icon" />
+    </button>
   );
 }
