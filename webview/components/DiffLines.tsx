@@ -22,14 +22,17 @@ const EXPAND_ALL_LIMIT = 1000;
 
 // Полоса заголовка тянется на всю ширину строк, а она зависит от режима: в двух
 // колонках это две половины, в одной — одна. Ширина задана в CSS, отсюда только
-// режим.
+// режим. Сам текст заголовка живёт в липкой обёртке: строки бывают шире окна, и
+// уехавший за левый край номер хунка не подсказывает уже ничего.
 export function HunkRow({ hunk, viewMode }: { readonly hunk: Hunk; readonly viewMode: ViewMode }) {
   return (
     <div className={`gs-diff__hunk-header gs-diff__hunk-header--${viewMode}`}>
-      <span className="gs-diff__hunk-range">
-        @@ -{hunk.baseStart},{hunk.baseCount} +{hunk.compareStart},{hunk.compareCount} @@
+      <span className="gs-diff__sticky">
+        <span className="gs-diff__hunk-range">
+          @@ -{hunk.baseStart},{hunk.baseCount} +{hunk.compareStart},{hunk.compareCount} @@
+        </span>
+        {hunk.header ? <span className="gs-diff__hunk-context">{hunk.header}</span> : null}
       </span>
-      {hunk.header ? <span className="gs-diff__hunk-context">{hunk.header}</span> : null}
     </div>
   );
 }
@@ -109,59 +112,65 @@ function SplitSide({
  */
 export function ExpanderRow({
   row,
+  viewMode,
   onExpand,
 }: {
   /** Достаточно границ промежутка — их несут строки обеих панелей. */
   readonly row: { readonly compareStart: number; readonly compareEnd: number };
+  readonly viewMode: ViewMode;
   readonly onExpand: (from: number, to: number) => void;
 }) {
   const count = row.compareEnd - row.compareStart + 1;
 
-  if (count <= EXPAND_AT_ONCE) {
-    return (
-      <div className="gs-expander">
-        <button type="button" className="gs-expander__button" onClick={() => onExpand(row.compareStart, row.compareEnd)}>
-          <Icon name="unfold" size={12} />
-          развернуть {count} {plural(count, ['строку', 'строки', 'строк'])}
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="gs-expander">
-      <button
-        type="button"
-        className="gs-expander__button"
-        title="Показать строки сверху промежутка"
-        onClick={() => onExpand(row.compareStart, row.compareStart + EXPAND_STEP - 1)}
-      >
-        <Icon name="chevron-up" size={12} />
-        {EXPAND_STEP}
-      </button>
-      {count <= EXPAND_ALL_LIMIT ? (
-        <button
-          type="button"
-          className="gs-expander__button"
-          onClick={() => onExpand(row.compareStart, row.compareEnd)}
-        >
-          <Icon name="unfold" size={12} />
-          все {count}
-        </button>
-      ) : (
-        <span className="gs-expander__label">
-          скрыто {count} {plural(count, ['строка', 'строки', 'строк'])}
-        </span>
-      )}
-      <button
-        type="button"
-        className="gs-expander__button"
-        title="Показать строки снизу промежутка"
-        onClick={() => onExpand(row.compareEnd - EXPAND_STEP + 1, row.compareEnd)}
-      >
-        <Icon name="chevron-down" size={12} />
-        {EXPAND_STEP}
-      </button>
+    <div className={`gs-expander gs-expander--${viewMode}`}>
+      <span className="gs-diff__sticky">
+        {count <= EXPAND_AT_ONCE ? (
+          <button
+            type="button"
+            className="gs-expander__button"
+            onClick={() => onExpand(row.compareStart, row.compareEnd)}
+          >
+            <Icon name="unfold" size={12} />
+            развернуть {count} {plural(count, ['строку', 'строки', 'строк'])}
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="gs-expander__button"
+              title="Показать строки сверху промежутка"
+              onClick={() => onExpand(row.compareStart, row.compareStart + EXPAND_STEP - 1)}
+            >
+              <Icon name="chevron-up" size={12} />
+              {EXPAND_STEP}
+            </button>
+            {count <= EXPAND_ALL_LIMIT ? (
+              <button
+                type="button"
+                className="gs-expander__button"
+                onClick={() => onExpand(row.compareStart, row.compareEnd)}
+              >
+                <Icon name="unfold" size={12} />
+                все {count}
+              </button>
+            ) : (
+              <span className="gs-expander__label">
+                скрыто {count} {plural(count, ['строка', 'строки', 'строк'])}
+              </span>
+            )}
+            <button
+              type="button"
+              className="gs-expander__button"
+              title="Показать строки снизу промежутка"
+              onClick={() => onExpand(row.compareEnd - EXPAND_STEP + 1, row.compareEnd)}
+            >
+              <Icon name="chevron-down" size={12} />
+              {EXPAND_STEP}
+            </button>
+          </>
+        )}
+      </span>
     </div>
   );
 }

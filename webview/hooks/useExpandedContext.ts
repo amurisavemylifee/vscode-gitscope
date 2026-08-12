@@ -12,10 +12,17 @@ import { highlightLines, type SyntaxTheme } from '../syntax/highlighter';
  */
 export function useExpandedContext(comparisonKey: string, theme: SyntaxTheme) {
   const [context, setContext] = useState<ContextStore>(() => new Map());
+  /**
+   * Самая длинная подгруженная строка. Ширину строк канва считает по самой
+   * длинной из показанных, а развёрнутый контекст бывает длиннее всего, что
+   * есть в патчах: без него подложки обрывались бы на такой строке.
+   */
+  const [maxContextLength, setMaxContextLength] = useState(0);
 
   // Другое сравнение — другие файлы; и смена темы обесценивает подсветку.
   useEffect(() => {
     setContext(new Map());
+    setMaxContextLength(0);
   }, [comparisonKey, theme]);
 
   const expandContext = useCallback(
@@ -29,6 +36,14 @@ export function useExpandedContext(comparisonKey: string, theme: SyntaxTheme) {
         }
 
         const tokens = await highlightLines(path, lines, theme).catch(() => undefined);
+
+        let longest = 0;
+        for (const text of lines) {
+          if (text.length > longest) {
+            longest = text.length;
+          }
+        }
+        setMaxContextLength((previous) => Math.max(previous, longest));
 
         setContext((previous) => {
           const next = new Map(previous);
@@ -45,5 +60,5 @@ export function useExpandedContext(comparisonKey: string, theme: SyntaxTheme) {
     [theme],
   );
 
-  return { context, expandContext };
+  return { context, expandContext, maxContextLength };
 }

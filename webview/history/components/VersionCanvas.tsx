@@ -180,7 +180,7 @@ function RowContent({
     case 'hunk':
       return <HunkRow hunk={row.hunk} viewMode={viewMode} />;
     case 'expander':
-      return <ExpanderRow row={row} onExpand={onExpand} />;
+      return <ExpanderRow row={row} viewMode={viewMode} onExpand={onExpand} />;
     case 'line':
       return <LineRow line={row.line} tokens={row.tokens} />;
     case 'split':

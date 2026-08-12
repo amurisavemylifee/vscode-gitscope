@@ -78,6 +78,8 @@
 .gs-code {
   display: grid;
   grid-template-columns: 56px 1fr;
+  /* Строки одной ширины — со всю самую длинную: см. .gs-diff__row. */
+  min-width: calc(56px + var(--gs-split-code, 80ch));
   min-height: var(--gs-line-height-code);
   font-family: var(--gs-font-code);
   font-size: var(--gs-font-size-code);
@@ -85,8 +87,13 @@
   tab-size: 4;
 }
 
+/* Номер строки остаётся на месте при горизонтальной прокрутке. */
 .gs-code__num {
+  position: sticky;
+  left: 0;
+  z-index: 1;
   padding: 0 12px 0 4px;
+  background-color: var(--gs-bg);
   color: var(--vscode-editorLineNumber-foreground, #6e7681);
   font-size: 11px;
   font-variant-numeric: tabular-nums;

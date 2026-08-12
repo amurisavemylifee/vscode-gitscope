@@ -36,7 +36,7 @@ export function App() {
   const theme = useSyntaxTheme();
   const tokens = useSyntaxTokens(patches, theme);
   const lineHeight = useCodeLineHeight(theme);
-  const { context, expandContext } = useExpandedContext(comparisonKey, theme);
+  const { context, expandContext, maxContextLength } = useExpandedContext(comparisonKey, theme);
 
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
@@ -202,7 +202,7 @@ export function App() {
           expanded={expanded}
           collapseOverLines={settings.collapseFilesOverLines}
           lineHeight={lineHeight}
-          maxLineLength={maxLineLength}
+          maxLineLength={Math.max(maxLineLength, maxContextLength)}
           scrollTarget={scrollTarget}
           onToggleCollapse={toggleCollapse}
           onExpandLarge={expandLarge}

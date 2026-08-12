@@ -19,6 +19,30 @@
   min-height: var(--gs-line-height-code);
 }
 
+/* Все строки одной ширины — со всю самую длинную строку, а не с окно. Иначе при
+   горизонтальной прокрутке подложка изменённой строки и полосы служебных строк
+   обрываются на ширине окна, и от разметки остаётся пустота. Слагаемые — номера
+   и маркеры из сеток; --gs-split-code канва задаёт по самой длинной строке. */
+.gs-diff__row,
+.gs-diff__hunk-header--unified,
+.gs-expander--unified {
+  min-width: calc(110px + var(--gs-split-code, 80ch));
+}
+
+.gs-diff__hunk-header--split,
+.gs-expander--split {
+  min-width: calc(128px + 2 * var(--gs-split-code, 80ch));
+}
+
+/* Содержимое служебных полос остаётся у левого края окна: полоса тянется на всю
+   строку, но кнопки и номер хунка нужны там, где на них смотрят. */
+.gs-diff__sticky {
+  position: sticky;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+}
+
 .gs-diff__row--note {
   color: var(--gs-fg-muted);
   font-style: italic;
@@ -37,6 +61,41 @@
   color: var(--gs-fg-muted);
   text-align: center;
   user-select: none;
+}
+
+/* Жёлоб с номерами и маркером не уезжает при горизонтальной прокрутке: без него
+   у длинной строки не понять, к какой строке относится уехавший вбок код и
+   правка это или удаление. Подложка непрозрачная — иначе код едет под номерами.
+   Смещения повторяют колонки сеток .gs-diff__row и .gs-split__row. */
+.gs-diff__num,
+.gs-diff__marker {
+  position: sticky;
+  z-index: 1;
+  background-color: var(--gs-bg);
+}
+
+.gs-diff__row > .gs-diff__num:first-child {
+  left: 0;
+}
+
+.gs-diff__row > .gs-diff__num:nth-child(2) {
+  left: 46px;
+}
+
+.gs-diff__row > .gs-diff__marker {
+  left: 92px;
+}
+
+/* Подкраска изменения ложится поверх непрозрачной подложки жёлоба: цвета
+   полупрозрачные, и одним background-color их не совместить. */
+.gs-diff__line--insert .gs-diff__num,
+.gs-diff__line--insert .gs-diff__marker {
+  background-image: linear-gradient(var(--gs-added-line), var(--gs-added-line));
+}
+
+.gs-diff__line--delete .gs-diff__num,
+.gs-diff__line--delete .gs-diff__marker {
+  background-image: linear-gradient(var(--gs-removed-line), var(--gs-removed-line));
 }
 
 .gs-diff__line--insert .gs-diff__marker {
@@ -59,27 +118,19 @@
 
 .gs-diff__hunk-header {
   display: flex;
-  gap: var(--gs-space-3);
   align-items: center;
   height: 24px;
   padding: 0 8px 0 12px;
   background: color-mix(in srgb, var(--gs-fg-muted) 8%, transparent);
   color: var(--gs-fg-muted);
   font-family: var(--gs-font-code);
-  /* Кегль как у кода: ширина полосы ниже задана в ch, и считаться ch должен по
-     тому же шрифту, что и колонки строк. Сам текст мельче — на вложенных span. */
+  /* Кегль как у кода: ширина полосы задана в ch, и считаться ch должен по тому
+     же шрифту, что и колонки строк. Сам текст мельче — на вложенных span. */
   font-size: var(--gs-font-size-code);
 }
 
-/* Полоса шириной со всю строку, а не с окно: иначе при горизонтальной прокрутке
-   заголовок хунка уезжает за левый край и на его месте остаётся пустота.
-   Слагаемые — номера и маркеры из сеток .gs-diff__row и .gs-split__row. */
-.gs-diff__hunk-header--unified {
-  min-width: calc(110px + var(--gs-split-code, 80ch));
-}
-
-.gs-diff__hunk-header--split {
-  min-width: calc(128px + 2 * var(--gs-split-code, 80ch));
+.gs-diff__hunk-header > .gs-diff__sticky {
+  gap: var(--gs-space-3);
 }
 
 .gs-diff__hunk-range {
@@ -130,17 +181,34 @@
   min-height: var(--gs-line-height-code);
 }
 
+/* Липнет только левый жёлоб: правый стоит посреди строки, и прижать его к краю
+   окна означало бы закрыть им левую половину. Подкраска — картинкой поверх
+   непрозрачной подложки, иначе под липкими ячейками будет виден код. */
+.gs-split__row > .gs-diff__num:first-child {
+  left: 0;
+}
+
+.gs-split__row > .gs-diff__marker:nth-child(2) {
+  left: 46px;
+}
+
 .gs-split__cell--insert {
-  background: var(--gs-added-line);
+  background-color: var(--gs-bg);
+  background-image: linear-gradient(var(--gs-added-line), var(--gs-added-line));
 }
 
 .gs-split__cell--delete {
-  background: var(--gs-removed-line);
+  background-color: var(--gs-bg);
+  background-image: linear-gradient(var(--gs-removed-line), var(--gs-removed-line));
 }
 
 /* Пустая сторона: строки с этим номером на этой ревизии просто нет. */
 .gs-split__cell--empty {
-  background: color-mix(in srgb, var(--gs-fg-muted) 6%, transparent);
+  background-color: var(--gs-bg);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--gs-fg-muted) 6%, transparent),
+    color-mix(in srgb, var(--gs-fg-muted) 6%, transparent)
+  );
 }
 
 /* Разделитель между половинами. */
@@ -165,12 +233,15 @@
 .gs-expander {
   display: flex;
   align-items: center;
-  gap: var(--gs-space-2);
   height: 26px;
   padding: 0 12px;
   background: color-mix(in srgb, var(--gs-accent) 7%, transparent);
   border-top: 1px solid color-mix(in srgb, var(--gs-border) 60%, transparent);
   border-bottom: 1px solid color-mix(in srgb, var(--gs-border) 60%, transparent);
+}
+
+.gs-expander > .gs-diff__sticky {
+  gap: var(--gs-space-2);
 }
 
 .gs-expander__button {

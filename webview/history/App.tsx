@@ -16,7 +16,7 @@ import { useHistoryState } from './hooks/useHistoryState';
 import { useVersionContext } from './hooks/useVersionContext';
 import { useContentTokens, usePatchTokens } from './hooks/useVersionTokens';
 import { useVersions } from './hooks/useVersions';
-import { buildContentRows, buildPatchRows, noticeRows } from './rows';
+import { buildContentRows, buildPatchRows, noticeRows, type VersionRow } from './rows';
 import './App.css';
 
 interface StoredLayout {
@@ -109,7 +109,7 @@ export function App() {
     settings.viewMode,
   ]);
 
-  const maxLineLength = useMemo(() => longestLine(patch?.hunks), [patch]);
+  const maxLineLength = useMemo(() => longestRow(rows), [rows]);
   const changes = useMemo(() => collectChanges(rows, lineHeight), [rows, lineHeight]);
 
   const [changeIndex, setChangeIndex] = useState(0);
@@ -317,15 +317,35 @@ export function App() {
   );
 }
 
-/** Самая длинная строка патча — по ней выравниваются половины в двух колонках. */
-function longestLine(hunks: readonly { readonly lines: readonly { readonly text: string }[] }[] | undefined): number {
+/**
+ * Самая длинная показанная строка.
+ *
+ * По ней канва задаёт ширину строк: половины двух колонок обязаны быть
+ * одинаковой ширины, а подложки изменений — доходить до конца самой длинной
+ * строки, а не обрываться на краю окна. Считается по готовым строкам, а не по
+ * хункам патча: в просмотре файла целиком и в развёрнутых промежутках строки
+ * свои, и патч про них ничего не знает.
+ */
+function longestRow(rows: readonly VersionRow[]): number {
   let longest = 0;
-  for (const hunk of hunks ?? []) {
-    for (const line of hunk.lines) {
-      if (line.text.length > longest) {
-        longest = line.text.length;
-      }
+
+  for (const row of rows) {
+    let length = 0;
+    switch (row.kind) {
+      case 'code':
+        length = row.text.length;
+        break;
+      case 'line':
+        length = row.line.text.length;
+        break;
+      case 'split':
+        length = Math.max(row.row.left?.line.text.length ?? 0, row.row.right?.line.text.length ?? 0);
+        break;
+    }
+    if (length > longest) {
+      longest = length;
     }
   }
+
   return longest;
 }

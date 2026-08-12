@@ -217,7 +217,9 @@ function RowContent({
     case 'hunk':
       return <HunkRow hunk={row.hunk} viewMode={viewMode} />;
     case 'expander':
-      return <ExpanderRow row={row} onExpand={(from, to) => onExpandContext(file.path, from, to)} />;
+      return (
+        <ExpanderRow row={row} viewMode={viewMode} onExpand={(from, to) => onExpandContext(file.path, from, to)} />
+      );
     case 'line':
       return <LineRow line={row.line} tokens={row.tokens ?? hunkTokens(row.hunkIndex, row.lineIndex)} />;
     case 'split':

@@ -105,6 +105,12 @@ describe('HunkRow', () => {
 
     expect(container.querySelector('.gs-diff__hunk-header--split')).toBeInTheDocument();
   });
+
+  it('держит текст заголовка в липкой обёртке — при прокрутке вбок он остаётся виден', () => {
+    const { container } = render(<HunkRow hunk={hunk} viewMode="unified" />);
+
+    expect(container.querySelector('.gs-diff__sticky')?.textContent).toContain('@@ -10,4 +12,5 @@');
+  });
 });
 
 describe('ExpanderRow', () => {
@@ -119,7 +125,7 @@ describe('ExpanderRow', () => {
 
   it('короткий промежуток открывает одной кнопкой целиком', async () => {
     const onExpand = vi.fn();
-    render(<ExpanderRow row={row(1, 5)} onExpand={onExpand} />);
+    render(<ExpanderRow row={row(1, 5)} viewMode="unified" onExpand={onExpand} />);
 
     await userEvent.click(screen.getByRole('button', { name: /развернуть 5 строк/ }));
 
@@ -128,7 +134,7 @@ describe('ExpanderRow', () => {
 
   it('у длинного промежутка есть шаги сверху и снизу', async () => {
     const onExpand = vi.fn();
-    render(<ExpanderRow row={row(1, 100)} onExpand={onExpand} />);
+    render(<ExpanderRow row={row(1, 100)} viewMode="unified" onExpand={onExpand} />);
 
     const buttons = screen.getAllByRole('button');
     await userEvent.click(buttons[0]!);
@@ -138,8 +144,15 @@ describe('ExpanderRow', () => {
     expect(onExpand).toHaveBeenCalledWith(81, 100);
   });
 
+  it('помечает режим и держит кнопки в липкой обёртке: полоса во всю строку, кнопки — у края окна', () => {
+    const { container } = render(<ExpanderRow row={row(1, 5)} viewMode="split" onExpand={vi.fn()} />);
+
+    expect(container.querySelector('.gs-expander--split')).toBeInTheDocument();
+    expect(container.querySelector('.gs-expander > .gs-diff__sticky')?.querySelector('button')).toBeInTheDocument();
+  });
+
   it('очень длинный промежуток не предлагает открыть целиком', () => {
-    render(<ExpanderRow row={row(1, 5000)} onExpand={vi.fn()} />);
+    render(<ExpanderRow row={row(1, 5000)} viewMode="unified" onExpand={vi.fn()} />);
 
     expect(screen.queryByRole('button', { name: /все 5000/ })).not.toBeInTheDocument();
     expect(screen.getByText('скрыто 5000 строк')).toBeInTheDocument();
