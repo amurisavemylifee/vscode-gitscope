@@ -199,9 +199,13 @@ describe('buildPatchRows: свёрнутые промежутки', () => {
 
     const rows = buildPatchRows(gapped(), undefined, 'unified', entry(), context);
 
+    // Заголовок хунка идёт сразу за пропуском: открытые строки промежутка —
+    // продолжение его кода, и резать их полосой незачем. Числа в заголовке эти
+    // строки уже считают своими: хунк был @@ -5,1 +5,2 @@.
     expect(rows[0]).toMatchObject({ kind: 'expander', compareStart: 1, compareEnd: 2 });
-    expect(rows[1]).toMatchObject({ kind: 'line', line: { kind: 'context', text: 'третья', compareLine: 3, baseLine: 3 } });
-    expect(rows[2]).toMatchObject({ kind: 'line', line: { text: 'четвёртая', compareLine: 4 } });
+    expect(rows[1]).toMatchObject({ kind: 'hunk', hunk: { baseStart: 3, baseCount: 3, compareStart: 3, compareCount: 4 } });
+    expect(rows[2]).toMatchObject({ kind: 'line', line: { kind: 'context', text: 'третья', compareLine: 3, baseLine: 3 } });
+    expect(rows[3]).toMatchObject({ kind: 'line', line: { text: 'четвёртая', compareLine: 4 } });
   });
 
   it('развёрнутый целиком промежуток не оставляет ни кнопок, ни заголовка хунка', () => {

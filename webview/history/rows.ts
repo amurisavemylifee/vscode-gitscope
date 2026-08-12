@@ -7,7 +7,9 @@ import {
   EXPANDER_ROW_HEIGHT,
   HUNK_ROW_HEIGHT,
   NOTICE_ROW_HEIGHT,
+  withOpenedContext,
   type ContextLine,
+  type EmittedGap,
   type NoticeTone,
 } from '../diff/rows';
 import { visualLines } from '../diff/wrap';
@@ -155,19 +157,20 @@ export function buildPatchRows(
    * нет вовсе: его хунки не описывают файл целиком, и границы посчитались бы
    * неправильно.
    *
-   * Возвращает, остались ли в промежутке скрытые строки: по этому заголовок
-   * следующего хунка решает, показываться ли ему.
+   * Возвращает, остались ли в промежутке скрытые строки, и место для заголовка
+   * следующего хунка: по этому заголовок решает, показываться ли ему и где
+   * встать.
    */
-  const emitGap = (from: number, to: number, baseFrom: number, gapIndex: number): boolean => {
+  const emitGap = (from: number, to: number, baseFrom: number, gapIndex: number): EmittedGap => {
     // У обрезанного патча промежутки неизвестны — считаем, что скрытое есть.
     if (patch.truncated) {
-      return true;
+      return { hidden: true, headerAt: rows.length, prepended: 0 };
     }
     if (from > to) {
-      return false;
+      return { hidden: false, headerAt: rows.length, prepended: 0 };
     }
     const baseOffset = baseFrom - from;
-    let hidden = false;
+    let lastHiddenEnd: number | undefined;
 
     let cursor = from;
     while (cursor <= to) {
@@ -184,27 +187,37 @@ export function buildPatchRows(
           compareEnd: end,
           baseOffset,
         });
-        hidden = true;
+        lastHiddenEnd = end;
         cursor = end + 1;
         continue;
       }
       pushContextLine(rows, viewMode, cursor, cursor + baseOffset, available);
       cursor += 1;
     }
-    return hidden;
+
+    // Строки за последним пропуском идут дальше подряд с кодом хунка: каждая
+    // дала ровно одну строку списка, поэтому заголовку место перед ними.
+    const prepended = lastHiddenEnd === undefined ? 0 : to - lastHiddenEnd;
+    return { hidden: lastHiddenEnd !== undefined, headerAt: rows.length - prepended, prepended };
   };
 
   let previousEnd = 0;
   let previousBaseEnd = 0;
 
   patch.hunks.forEach((hunk, hunkIndex) => {
-    const hidden = emitGap(previousEnd + 1, hunk.compareStart - 1, previousBaseEnd + 1, hunkIndex);
+    const gap = emitGap(previousEnd + 1, hunk.compareStart - 1, previousBaseEnd + 1, hunkIndex);
 
     // Заголовок хунка нужен ровно затем, чтобы отметить пропущенные строки.
     // Если пропускать нечего — промежутка не было или его развернули целиком —
     // код идёт подряд, и полоса посреди него только делит его без причины.
-    if (hidden) {
-      rows.push({ kind: 'hunk', key: `hunk:${hunkIndex}`, hunk });
+    // А если что-то осталось, заголовок встаёт сразу за пропуском: открытые
+    // строки промежутка — продолжение кода хунка, и резать их полосой незачем.
+    if (gap.hidden) {
+      rows.splice(gap.headerAt, 0, {
+        kind: 'hunk',
+        key: `hunk:${hunkIndex}`,
+        hunk: withOpenedContext(hunk, gap.prepended),
+      });
     }
     const hunkTokens = tokens?.hunks[hunkIndex];
 

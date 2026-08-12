@@ -142,6 +142,36 @@ export function rowAtOffset(items: readonly RowBounds[], offset: number): number
 /** Последняя строка хунка на каждой стороне. Пустой хунк «заканчивается» на своей стартовой строке. */
 export const endOf = (start: number, count: number) => (count === 0 ? start : start + count - 1);
 
+/** Что осталось от промежутка и куда встаёт заголовок следующего хунка. */
+export interface EmittedGap {
+  /** Остались ли скрытые строки: без них заголовку нечего отмечать. */
+  readonly hidden: boolean;
+  /** Место заголовка в общем списке — сразу за последним пропуском. */
+  readonly headerAt: number;
+  /** Сколько строк промежутка открыто после последнего пропуска. */
+  readonly prepended: number;
+}
+
+/**
+ * Заголовок описывает то, что идёт под ним.
+ *
+ * Открытые строки промежутка стоят между пропуском и хунком, то есть под
+ * заголовком, — значит и в его счёт они входят: блок начинается на столько
+ * строк выше и на столько же длиннее.
+ */
+export function withOpenedContext(hunk: Hunk, prepended: number): Hunk {
+  if (prepended === 0) {
+    return hunk;
+  }
+  return {
+    ...hunk,
+    baseStart: hunk.baseStart - prepended,
+    baseCount: hunk.baseCount + prepended,
+    compareStart: hunk.compareStart - prepended,
+    compareCount: hunk.compareCount + prepended,
+  };
+}
+
 export function buildDiffRows({
   files,
   patches,
@@ -229,19 +259,20 @@ export function buildDiffRows({
      * разворачивать нельзя: его хунки не описывают файл целиком, и
      * промежутки посчитались бы неправильно.
      *
-     * Возвращает, остались ли в промежутке скрытые строки: по этому заголовок
-     * следующего хунка решает, показываться ли ему.
+     * Возвращает, остались ли в промежутке скрытые строки, и место для
+     * заголовка следующего хунка: по этому заголовок решает, показываться ли
+     * ему и где встать.
      */
-    const emitGap = (compareFrom: number, compareTo: number, baseFrom: number, gapIndex: number): boolean => {
+    const emitGap = (compareFrom: number, compareTo: number, baseFrom: number, gapIndex: number): EmittedGap => {
       // У обрезанного патча промежутки неизвестны — считаем, что скрытое есть.
       if (patch.truncated) {
-        return true;
+        return { hidden: true, headerAt: rows.length, prepended: 0 };
       }
       if (compareFrom > compareTo) {
-        return false;
+        return { hidden: false, headerAt: rows.length, prepended: 0 };
       }
       const baseOffset = baseFrom - compareFrom;
-      let hidden = false;
+      let lastHiddenEnd: number | undefined;
 
       let cursor = compareFrom;
       while (cursor <= compareTo) {
@@ -259,7 +290,7 @@ export function buildDiffRows({
             compareEnd: end,
             baseOffset,
           });
-          hidden = true;
+          lastHiddenEnd = end;
           cursor = end + 1;
           continue;
         }
@@ -281,20 +312,32 @@ export function buildDiffRows({
         });
         cursor += 1;
       }
-      return hidden;
+
+      // Строки за последним пропуском идут дальше подряд с кодом хунка: каждая
+      // дала ровно одну строку списка, поэтому заголовку место перед ними.
+      const prepended = lastHiddenEnd === undefined ? 0 : compareTo - lastHiddenEnd;
+      return { hidden: lastHiddenEnd !== undefined, headerAt: rows.length - prepended, prepended };
     };
 
     let previousCompareEnd = 0;
     let previousBaseEnd = 0;
 
     patch.hunks.forEach((hunk, hunkIndex) => {
-      const hidden = emitGap(previousCompareEnd + 1, hunk.compareStart - 1, previousBaseEnd + 1, hunkIndex);
+      const gap = emitGap(previousCompareEnd + 1, hunk.compareStart - 1, previousBaseEnd + 1, hunkIndex);
 
       // Заголовок хунка нужен ровно затем, чтобы отметить пропущенные строки.
       // Если пропускать нечего — промежутка не было или его развернули целиком —
       // код идёт подряд, и полоса посреди него только делит его без причины.
-      if (hidden) {
-        rows.push({ kind: 'hunk', key: `hunk:${file.path}:${hunkIndex}`, fileIndex, hunkIndex, hunk });
+      // А если что-то осталось, заголовок встаёт сразу за пропуском: открытые
+      // строки промежутка — продолжение кода хунка, и резать их полосой незачем.
+      if (gap.hidden) {
+        rows.splice(gap.headerAt, 0, {
+          kind: 'hunk',
+          key: `hunk:${file.path}:${hunkIndex}`,
+          fileIndex,
+          hunkIndex,
+          hunk: withOpenedContext(hunk, gap.prepended),
+        });
       }
 
       if (viewMode === 'split') {

@@ -285,14 +285,37 @@ describe('промежутки между хунками', () => {
     expect(rows[5]).toMatchObject({ compareStart: 12, compareEnd: 20 });
   });
 
+  // Открытые строки промежутка — продолжение кода хунка, поэтому полоса
+  // заголовка встаёт до них, сразу за оставшимся пропуском, а не между ними.
   it('подгруженные строки показывает как контекст, на остаток оставляет кнопку', () => {
     const rows = withGaps({
       context: new Map([['src/a.ts', new Map([[8, { text: 'восьмая' }], [9, { text: 'девятая' }]])]]),
     }).rows;
 
-    expect(kinds(rows)).toEqual(['file', 'expander', 'line', 'line', 'hunk', 'line', 'line', 'expander']);
+    expect(kinds(rows)).toEqual(['file', 'expander', 'hunk', 'line', 'line', 'line', 'line', 'expander']);
     expect(rows[1]).toMatchObject({ compareStart: 1, compareEnd: 7 });
-    expect(rows[2]).toMatchObject({ kind: 'line', line: { text: 'восьмая', compareLine: 8, baseLine: 8 } });
+    expect(rows[3]).toMatchObject({ kind: 'line', line: { text: 'восьмая', compareLine: 8, baseLine: 8 } });
+  });
+
+  it('если пропуск остался прямо над хунком, заголовок остаётся при нём', () => {
+    const rows = withGaps({
+      context: new Map([['src/a.ts', new Map([[1, { text: 'первая' }], [2, { text: 'вторая' }]])]]),
+    }).rows;
+
+    expect(kinds(rows)).toEqual(['file', 'line', 'line', 'expander', 'hunk', 'line', 'line', 'expander']);
+    expect(rows[4]).toMatchObject({ kind: 'hunk', hunk: { compareStart: 10, compareCount: 2 } });
+  });
+
+  it('заголовок считает открытые строки своими: блок начинается выше и длиннее', () => {
+    const rows = withGaps({
+      context: new Map([['src/a.ts', new Map([[8, { text: 'восьмая' }], [9, { text: 'девятая' }]])]]),
+    }).rows;
+
+    // Хунк был @@ -10,2 +10,2 @@, а над ним открыли две строки промежутка.
+    expect(rows[2]).toMatchObject({
+      kind: 'hunk',
+      hunk: { baseStart: 8, baseCount: 4, compareStart: 8, compareCount: 4 },
+    });
   });
 
   it('переносит подсветку подгруженной строки в саму строку', () => {
