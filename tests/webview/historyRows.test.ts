@@ -90,16 +90,17 @@ describe('buildContentRows', () => {
 });
 
 describe('buildPatchRows', () => {
-  it('в одной колонке даёт заголовок хунка и строки подряд', () => {
+  // Хунк с первой строки ничего не пропускает, поэтому его заголовка здесь нет.
+  it('в одной колонке даёт строки подряд', () => {
     const rows = buildPatchRows(patch(), undefined, 'unified', entry());
 
-    expect(rows.map((row) => row.kind)).toEqual(['hunk', 'line', 'line']);
+    expect(rows.map((row) => row.kind)).toEqual(['line', 'line']);
   });
 
   it('в двух колонках складывает строки парами', () => {
     const rows = buildPatchRows(patch(), undefined, 'split', entry());
 
-    expect(rows.map((row) => row.kind)).toEqual(['hunk', 'split', 'split']);
+    expect(rows.map((row) => row.kind)).toEqual(['split', 'split']);
   });
 
   it('подставляет подсветку строк из токенов хунка', () => {
@@ -107,7 +108,7 @@ describe('buildPatchRows', () => {
 
     const rows = buildPatchRows(patch(), tokens, 'unified', entry());
 
-    expect(rows[1]).toMatchObject({ tokens: tokens.hunks[0]?.[0] });
+    expect(rows[0]).toMatchObject({ tokens: tokens.hunks[0]?.[0] });
   });
 
   it('файлу вне git честно говорит, что сравнивать не с чем', () => {
@@ -256,10 +257,12 @@ describe('versionRowHeight', () => {
 
   it('служебные строки и заголовки хунков имеют свои высоты', () => {
     const [service] = noticeRows('muted', 'Загружаем…');
-    const [header] = buildPatchRows(patch(), undefined, 'unified', entry());
+    // Заголовок появляется только над хунком, выше которого что-то свёрнуто.
+    const shifted = patch({ hunks: [{ ...hunk(), baseStart: 5, compareStart: 5 }] });
+    const header = buildPatchRows(shifted, undefined, 'unified', entry()).find((row) => row.kind === 'hunk');
 
     expect(versionRowHeight(service as never, 19)).toBe(NOTICE_ROW_HEIGHT);
-    expect(versionRowHeight(header as never, 19)).toBe(HUNK_ROW_HEIGHT);
+    expect(header && versionRowHeight(header, 19)).toBe(HUNK_ROW_HEIGHT);
   });
 
   it('строка без перевода в конце файла занимает две строки: под ней подпись', () => {
@@ -275,7 +278,7 @@ describe('versionRowHeight', () => {
     const unified = buildPatchRows(withNote, undefined, 'unified', entry());
     const split = buildPatchRows(withNote, undefined, 'split', entry());
 
-    expect(versionRowHeight(unified[1] as never, 19)).toBe(38);
-    expect(versionRowHeight(split[1] as never, 19)).toBe(38);
+    expect(versionRowHeight(unified[0] as never, 19)).toBe(38);
+    expect(versionRowHeight(split[0] as never, 19)).toBe(38);
   });
 });

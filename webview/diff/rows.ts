@@ -260,16 +260,12 @@ export function buildDiffRows({
     let previousBaseEnd = 0;
 
     patch.hunks.forEach((hunk, hunkIndex) => {
-      const gapFrom = previousCompareEnd + 1;
-      const gapTo = hunk.compareStart - 1;
-      const hidden = emitGap(gapFrom, gapTo, previousBaseEnd + 1, hunkIndex);
+      const hidden = emitGap(previousCompareEnd + 1, hunk.compareStart - 1, previousBaseEnd + 1, hunkIndex);
 
-      // Заголовок хунка говорит о пропущенных строках. Если промежуток развернули
-      // целиком, строки над ним и под ним идут подряд, и полоса посреди сплошного
-      // кода делит его без причины. Первый хунк без промежутка сверху — не «продолжение»
-      // чего-то, там заголовок остаётся началом изменений.
-      const continuesPrevious = hunkIndex > 0 || gapFrom <= gapTo;
-      if (hidden || !continuesPrevious) {
+      // Заголовок хунка нужен ровно затем, чтобы отметить пропущенные строки.
+      // Если пропускать нечего — промежутка не было или его развернули целиком —
+      // код идёт подряд, и полоса посреди него только делит его без причины.
+      if (hidden) {
         rows.push({ kind: 'hunk', key: `hunk:${file.path}:${hunkIndex}`, fileIndex, hunkIndex, hunk });
       }
 

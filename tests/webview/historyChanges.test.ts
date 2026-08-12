@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { HistoryEntry } from '@shared/historyModel';
 import type { DiffLine, FilePatch, Hunk } from '@shared/model';
-import { HUNK_ROW_HEIGHT } from '../../webview/diff/rows';
 import { changeAtOffset, collectChanges, wrapChangeIndex } from '../../webview/history/changes';
 import { buildPatchRows } from '../../webview/history/rows';
 
@@ -73,9 +72,9 @@ describe('collectChanges', () => {
 
     const { blocks, total } = collectChanges(rows, LINE);
 
-    // Заголовок хунка, строка контекста, изменение.
-    expect(blocks[0]).toMatchObject({ row: 2, top: HUNK_ROW_HEIGHT + LINE, height: LINE });
-    expect(total).toBe(HUNK_ROW_HEIGHT + LINE * 2);
+    // Строка контекста, за ней изменение.
+    expect(blocks[0]).toMatchObject({ row: 1, top: LINE, height: LINE });
+    expect(total).toBe(LINE * 2);
   });
 
   it('в двух колонках находит те же изменения, что и в одной', () => {
@@ -115,11 +114,11 @@ describe('changeAtOffset', () => {
 
   it('пока изменение не уехало за верхний край, счётчик стоит на нём', () => {
     expect(changeAtOffset(blocks, 0)).toBe(0);
-    expect(changeAtOffset(blocks, HUNK_ROW_HEIGHT)).toBe(0);
+    expect(changeAtOffset(blocks, LINE - 1)).toBe(0);
   });
 
   it('уехало — счётчик переходит к следующему', () => {
-    expect(changeAtOffset(blocks, HUNK_ROW_HEIGHT + LINE)).toBe(1);
+    expect(changeAtOffset(blocks, LINE)).toBe(1);
   });
 
   it('ниже последнего изменения остаётся на нём, а не срывается за список', () => {

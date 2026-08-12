@@ -53,8 +53,9 @@ const build = (params: Partial<Parameters<typeof buildDiffRows>[0]> = {}) =>
 const kinds = (rows: readonly DiffRow[]) => rows.map((row) => row.kind);
 
 describe('buildDiffRows', () => {
-  it('раскладывает файл в заголовок, хунк и строки', () => {
-    expect(kinds(build().rows)).toEqual(['file', 'hunk', 'line', 'line', 'line']);
+  // Хунк с первой строки ничего не пропускает, поэтому его заголовка здесь нет.
+  it('раскладывает файл в заголовок и строки', () => {
+    expect(kinds(build().rows)).toEqual(['file', 'line', 'line', 'line']);
   });
 
   it('запоминает, где начинается каждый файл', () => {
@@ -66,7 +67,16 @@ describe('buildDiffRows', () => {
       ]),
     });
 
-    expect(fileRowIndex).toEqual([0, 5]);
+    expect(fileRowIndex).toEqual([0, 4]);
+  });
+
+  it('у нового файла заголовка хунка нет: пропускать в нём нечего', () => {
+    const rows = build({
+      // @@ -0,0 +1,3 @@ — файл целиком добавлен одним хунком.
+      patches: new Map([['src/a.ts', ready({ hunks: [{ ...hunk(3), baseStart: 0, baseCount: 0 }] })]]),
+    }).rows;
+
+    expect(kinds(rows)).toEqual(['file', 'line', 'line', 'line']);
   });
 
   it('у свёрнутого файла оставляет только заголовок', () => {
@@ -121,7 +131,7 @@ describe('buildDiffRows', () => {
       expanded: new Set(['src/a.ts']),
     }).rows;
 
-    expect(rows).toHaveLength(52);
+    expect(rows).toHaveLength(51);
   });
 
   it('не сворачивает ничего при нулевом пороге', () => {
@@ -130,7 +140,7 @@ describe('buildDiffRows', () => {
       collapseOverLines: 0,
     }).rows;
 
-    expect(rows).toHaveLength(5002);
+    expect(rows).toHaveLength(5001);
   });
 
   it('предупреждает об обрезанном патче, но всё равно показывает строки', () => {
@@ -176,11 +186,11 @@ describe('rowHeight', () => {
   });
 
   it('служебные строки имеют фиксированную высоту', () => {
-    const file = rows.find((row) => row.kind === 'file');
-    const hunkRow = rows.find((row) => row.kind === 'hunk');
+    const fileRow = rows.find((row) => row.kind === 'file');
+    const hunkRow: DiffRow = { kind: 'hunk', key: 'h', fileIndex: 0, hunkIndex: 0, hunk: hunk(1) };
 
-    expect(file && rowHeight(file, 19)).toBe(34);
-    expect(hunkRow && rowHeight(hunkRow, 19)).toBe(24);
+    expect(fileRow && rowHeight(fileRow, 19)).toBe(34);
+    expect(rowHeight(hunkRow, 19)).toBe(24);
   });
 });
 
@@ -292,7 +302,7 @@ describe('промежутки между хунками', () => {
       patches: new Map([['src/a.ts', ready({ hunks: [hunkAt(1, 2)] })]]),
     }).rows;
 
-    expect(kinds(rows)).toEqual(['file', 'hunk', 'line', 'line']);
+    expect(kinds(rows)).toEqual(['file', 'line', 'line']);
   });
 });
 
@@ -322,8 +332,8 @@ describe('режим двух колонок', () => {
       ]),
     }).rows;
 
-    expect(kinds(rows)).toEqual(['file', 'hunk', 'split']);
-    expect(rows[2]).toMatchObject({
+    expect(kinds(rows)).toEqual(['file', 'split']);
+    expect(rows[1]).toMatchObject({
       row: { left: { line: { text: 'было' } }, right: { line: { text: 'стало' } } },
     });
   });
