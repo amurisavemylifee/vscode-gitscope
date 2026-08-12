@@ -1,6 +1,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { describeContent, type GitRepository } from '@core/git/GitRepository';
+import { describeContent, EMPTY_TREE, type GitRepository } from '@core/git/GitRepository';
+import type { FileLogCommit } from '@core/git/parsers/parseFileLog';
 import { annotateHunkWithWordDiff } from '@shared/diff/wordDiff';
 import type { FileVersion, HistoryEntry } from '@shared/historyModel';
 import { WORKING_ENTRY_ID, type HistoryPage } from '@shared/historyProtocol';
@@ -15,8 +16,12 @@ export const HISTORY_PAGE_SIZE = 60;
  */
 const MAX_CONTENT_BYTES = 4 * 1024 * 1024;
 
-/** Пустое дерево git — с ним сравнивается первый коммит, у которого нет родителя. */
-const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+/**
+ * Сколько переименований подряд готовы отследить в одну сторону. Файл,
+ * переезжавший десять раз, — уже экзотика, а предел защищает от зацикливания на
+ * истории, где имена ходят по кругу.
+ */
+const MAX_RENAME_HOPS = 10;
 
 /**
  * Откуда продолжать историю: последний показанный коммит и имя файла на нём.
@@ -47,11 +52,20 @@ export class FileHistoryService {
   /**
    * Страница истории от точки `base`. Без курсора — самая свежая, с курсором —
    * то, что было до указанного коммита.
+   *
+   * Переименования отслеживаются здесь, а не флагом `--follow` у git: страница
+   * набирается по кускам, и когда очередной кусок обрывается на коммите, где
+   * файл появился, мы заглядываем в этот коммит целиком и, если он оказался
+   * переименованием, продолжаем обход уже с прежним именем.
    */
   async page(base: string, cursor: HistoryCursor | undefined, signal?: AbortSignal): Promise<HistoryPage> {
     const options = signal ? { signal } : {};
+
     let revision = base;
-    let path = this.path;
+    let path = cursor?.path ?? (await this.pathAt(base, options));
+    // Коммит, ниже которого сейчас ищем: у него и спрашиваем прежнее имя, если
+    // история под ним оборвалась.
+    let boundary = cursor?.sha;
 
     if (cursor !== undefined) {
       const parent = await this.repository.firstParent(cursor.sha, options);
@@ -60,41 +74,57 @@ export class FileHistoryService {
         return { entries: [], hasMore: false };
       }
       revision = parent;
-      path = cursor.path;
     }
 
-    const commits = await this.repository.listFileHistory(path, {
-      limit: HISTORY_PAGE_SIZE,
-      revision,
-      ...options,
-    });
+    const entries: HistoryEntry[] = [];
 
-    const entries = commits.map((commit): HistoryEntry => {
-      const { change } = commit;
-      return {
-        id: commit.sha,
-        kind: 'commit',
-        // У слияния git не печатает diff, поэтому имя файла берём то, под
-        // которым он известен на этой странице: слиянием файл не переименуешь.
-        path: change?.path ?? path,
-        status: change?.status ?? 'modified',
-        insertions: change?.insertions ?? 0,
-        deletions: change?.deletions ?? 0,
-        binary: change?.binary ?? false,
-        sha: commit.sha,
-        shortSha: commit.shortSha,
-        subject: commit.subject,
-        authorName: commit.authorName,
-        authoredAt: commit.authoredAt,
-        ...(change?.previousPath !== undefined ? { previousPath: change.previousPath } : {}),
-        ...(change?.similarity !== undefined ? { similarity: change.similarity } : {}),
-        ...(commit.refs.length > 0 ? { refs: commit.refs } : {}),
-      };
-    });
+    for (let hop = 0; hop < MAX_RENAME_HOPS && entries.length < HISTORY_PAGE_SIZE; hop += 1) {
+      const commits = await this.repository.listFileHistory(path, {
+        limit: HISTORY_PAGE_SIZE - entries.length,
+        revision,
+        ...options,
+      });
+      entries.push(...commits.map((commit) => this.toEntry(commit, path)));
 
-    // Полная страница почти наверняка означает, что история на этом не
-    // кончилась. Проверять точно — ещё один обход истории ради одного бита.
-    return { entries, hasMore: entries.length === HISTORY_PAGE_SIZE };
+      const oldest = commits[commits.length - 1];
+      if (oldest !== undefined) {
+        boundary = oldest.sha;
+        path = oldest.change?.path ?? path;
+      }
+      if (boundary === undefined) {
+        break;
+      }
+
+      // В логе с фильтром по пути переименование выглядит добавлением файла:
+      // пару «удалено там, добавлено тут» видно, только если смотреть коммит
+      // целиком. Поэтому у каждого «добавления» переспрашиваем, не переезд ли это.
+      const addedHere = oldest === undefined || oldest.change?.status === 'added';
+      const rename = addedHere ? await this.renameSourceOf(boundary, path, options) : undefined;
+
+      // Возвращаем карточке правду: это переименование, а не рождение файла.
+      const last = entries[entries.length - 1];
+      if (rename !== undefined && oldest !== undefined && last !== undefined) {
+        entries[entries.length - 1] = {
+          ...last,
+          status: 'renamed',
+          previousPath: rename.previousPath,
+          ...(rename.similarity !== undefined ? { similarity: rename.similarity } : {}),
+        };
+      }
+
+      const parent = rename === undefined ? undefined : await this.repository.firstParent(boundary, options);
+      if (rename === undefined || parent === undefined || entries.length >= HISTORY_PAGE_SIZE) {
+        // Файл здесь и правда создан, а не переименован: история кончилась.
+        // Либо страница набралась — остальное догрузится по курсору.
+        break;
+      }
+      revision = parent;
+      path = rename.previousPath;
+    }
+
+    // Неполная страница означает, что история действительно кончилась: обрыв на
+    // переименовании мы бы уже перешагнули.
+    return { entries, hasMore: entries.length >= HISTORY_PAGE_SIZE };
   }
 
   /**
@@ -189,6 +219,82 @@ export class FileHistoryService {
       // она пересчитывалась бы на каждой перерисовке.
       hunks: diff.hunks.map(annotateHunkWithWordDiff),
       truncated,
+    };
+  }
+
+  private toEntry(commit: FileLogCommit, path: string): HistoryEntry {
+    const { change } = commit;
+    return {
+      id: commit.sha,
+      kind: 'commit',
+      // У слияния git не печатает diff, поэтому имя файла берём то, под которым
+      // он известен на этом куске истории: слиянием файл не переименуешь.
+      path: change?.path ?? path,
+      status: change?.status ?? 'modified',
+      insertions: change?.insertions ?? 0,
+      deletions: change?.deletions ?? 0,
+      binary: change?.binary ?? false,
+      sha: commit.sha,
+      shortSha: commit.shortSha,
+      subject: commit.subject,
+      authorName: commit.authorName,
+      authoredAt: commit.authoredAt,
+      ...(commit.merge ? { merge: true } : {}),
+      ...(change?.previousPath !== undefined ? { previousPath: change.previousPath } : {}),
+      ...(change?.similarity !== undefined ? { similarity: change.similarity } : {}),
+      ...(commit.refs.length > 0 ? { refs: commit.refs } : {}),
+    };
+  }
+
+  /**
+   * Как файл называется на этой ревизии.
+   *
+   * Панель открывают на файле из рабочей копии, а смотреть историю можно от
+   * любой точки — и там файл может лежать под другим именем. Спрашивать git про
+   * сегодняшний путь в таком случае бессмысленно: он покажет историю только до
+   * переименования, а всё, что было после, потеряется.
+   */
+  private async pathAt(revision: string, options: { signal?: AbortSignal }): Promise<string> {
+    if (await this.repository.hasPath(revision, this.path, options)) {
+      return this.path;
+    }
+
+    let current = this.path;
+    for (let hop = 0; hop < MAX_RENAME_HOPS; hop += 1) {
+      const removedAt = await this.repository.lastCommitRemoving(revision, current, options);
+      if (removedAt === undefined) {
+        break;
+      }
+      const renamedTo = (await this.repository.changesIn(removedAt, options)).find(
+        (entry) => entry.previousPath === current,
+      )?.path;
+      if (renamedTo === undefined) {
+        // Не переименование, а настоящее удаление: показываем историю этого
+        // пути до того коммита, где файл исчез.
+        break;
+      }
+      if (await this.repository.hasPath(revision, renamedTo, options)) {
+        return renamedTo;
+      }
+      current = renamedTo;
+    }
+
+    return this.path;
+  }
+
+  /** Откуда файл переехал в этом коммите; `undefined` — он здесь и правда создан. */
+  private async renameSourceOf(
+    sha: string,
+    path: string,
+    options: { signal?: AbortSignal },
+  ): Promise<{ previousPath: string; similarity?: number } | undefined> {
+    const change = (await this.repository.changesIn(sha, options)).find((entry) => entry.path === path);
+    if (change?.previousPath === undefined) {
+      return undefined;
+    }
+    return {
+      previousPath: change.previousPath,
+      ...(change.similarity !== undefined ? { similarity: change.similarity } : {}),
     };
   }
 

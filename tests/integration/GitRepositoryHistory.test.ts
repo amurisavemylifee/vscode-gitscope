@@ -45,31 +45,50 @@ describe('GitRepository: история файла', () => {
   afterAll(() => repo.dispose());
 
   describe('listFileHistory', () => {
-    it('отдаёт коммиты файла от свежих к старым', async () => {
+    it('отдаёт коммиты этого пути, от свежих к старым', async () => {
       const commits = await git.listFileHistory(path);
 
+      // Под коммитом переименования файла с таким именем ещё не было: пройти
+      // туда — задача слоя выше, здесь история честно кончается.
+      expect(commits.map((commit) => commit.subject)).toEqual(['дописали строку', 'переименование заметки']);
+    });
+
+    it('переименование выглядит добавлением: пару имён видно только в коммите целиком', async () => {
+      const commits = await git.listFileHistory(path);
+      const renamed = commits[1];
+
+      expect(renamed?.change).toMatchObject({ status: 'added', path });
+      expect(renamed?.change?.previousPath).toBeUndefined();
+
+      // А вот если посмотреть тот же коммит без фильтра по пути, пара находится.
+      const changes = await git.changesIn(renamed?.sha ?? '');
+      expect(changes).toContainEqual(expect.objectContaining({ status: 'renamed', path, previousPath: oldPath }));
+    });
+
+    it('под прежним именем видна история до переименования', async () => {
+      const commits = await git.listFileHistory(oldPath);
+
       expect(commits.map((commit) => commit.subject)).toEqual([
-        'дописали строку',
         'переименование заметки',
         'правка заметки',
         'создание заметки',
       ]);
-    });
-
-    it('ведёт историю через переименование', async () => {
-      const commits = await git.listFileHistory(path);
-
-      expect(commits[1]?.change).toMatchObject({ status: 'renamed', path, previousPath: oldPath });
-      // До переименования файл жил под прежним именем — история это помнит.
-      expect(commits[2]?.change?.path).toBe(oldPath);
-      expect(commits[3]?.change?.status).toBe('added');
+      expect(commits[0]?.change?.status).toBe('deleted');
+      expect(commits[2]?.change?.status).toBe('added');
     });
 
     it('считает добавленные и удалённые строки по каждому коммиту', async () => {
       const commits = await git.listFileHistory(path);
+      const older = await git.listFileHistory(oldPath);
 
       expect(commits[0]?.change).toMatchObject({ insertions: 1, deletions: 0, binary: false });
-      expect(commits[2]?.change).toMatchObject({ insertions: 2, deletions: 1 });
+      expect(older[1]?.change).toMatchObject({ insertions: 2, deletions: 1 });
+    });
+
+    it('отмечает слияния: git не печатает для них diff', async () => {
+      const commits = await git.listFileHistory(path);
+
+      expect(commits.every((commit) => commit.merge === false)).toBe(true);
     });
 
     it('показывает ссылки, указывающие на коммит', async () => {
@@ -101,6 +120,40 @@ describe('GitRepository: история файла', () => {
       const [commit] = await git.listFileHistory('assets/logo.png');
 
       expect(commit?.change).toMatchObject({ binary: true, insertions: 0, deletions: 0 });
+    });
+  });
+
+  describe('поиск переименований', () => {
+    it('changesIn показывает, что коммит сделал с деревом целиком', async () => {
+      const [renamed] = await git.listFileHistory(path, { limit: 2 });
+      const changes = await git.changesIn((await git.firstParent(renamed?.sha ?? '')) ?? '');
+
+      expect(changes).toContainEqual(expect.objectContaining({ status: 'renamed', path, previousPath: oldPath }));
+    });
+
+    it('changesIn у первого коммита сравнивает его с пустотой', async () => {
+      const root = await git.resolveCommit('HEAD~3');
+
+      const changes = await git.changesIn(root.sha);
+
+      expect(changes).toContainEqual(expect.objectContaining({ status: 'added', path: oldPath }));
+    });
+
+    it('lastCommitRemoving находит коммит, где путь исчез', async () => {
+      const removed = await git.lastCommitRemoving('HEAD', oldPath);
+      const renamedAt = (await git.listFileHistory(path, { limit: 2 }))[1];
+
+      expect(removed).toBe(renamedAt?.sha);
+    });
+
+    it('lastCommitRemoving молчит про путь, который никуда не девался', async () => {
+      await expect(git.lastCommitRemoving('HEAD', path)).resolves.toBeUndefined();
+    });
+
+    it('hasPath отвечает, существует ли файл на ревизии', async () => {
+      await expect(git.hasPath('HEAD', path)).resolves.toBe(true);
+      await expect(git.hasPath('HEAD', oldPath)).resolves.toBe(false);
+      await expect(git.hasPath('HEAD~2', oldPath)).resolves.toBe(true);
     });
   });
 

@@ -223,3 +223,122 @@ describe('FileHistoryService', () => {
     });
   });
 });
+
+/**
+ * Сценарий из отчёта об ошибке:
+ *
+ *   main:     c1 создание some-file.ts ── c2 правка ──────────────── c7 правка ── c8 слияние
+ *                                    └─ feature: c3 удаление ── c4 восстановление ──┘
+ *                                                c5 переименование в some-file-haha.ts
+ *                                                c6 правка после переименования
+ *
+ * Здесь проверяется то, что раньше терялось: история от ревизии, где файл
+ * называется иначе, переход через пару «удаление — восстановление» и
+ * merge-коммит, в котором правку принесло разрешение конфликта.
+ */
+describe('FileHistoryService: удаление, восстановление, переименование', () => {
+  let repo: TestRepo;
+  const oldPath = 'some-folder/some-file.ts';
+  const newPath = 'some-folder/some-file-haha.ts';
+  let featureSha: string;
+  let mergeSha: string;
+
+  const subjects = (entries: readonly HistoryEntry[]) => entries.map((entry) => entry.subject);
+
+  const serviceFor = async (path: string) =>
+    new FileHistoryService(await GitRepository.open(repo.root, new GitExecutor()), path);
+
+  beforeAll(async () => {
+    repo = TestRepo.create();
+
+    repo.write(oldPath, 'строка1\n');
+    repo.commit('создание файла');
+    repo.write(oldPath, 'строка1\nстрока2\n');
+    repo.commit('правка на main');
+
+    repo.checkout('feature', true);
+    repo.remove(oldPath);
+    repo.commit('удаление файла');
+    repo.write(oldPath, 'строка1\nстрока2\n');
+    repo.commit('восстановление файла');
+    repo.git('mv', oldPath, newPath);
+    repo.commit('переименование');
+    repo.write(newPath, 'строка1\nстрока2\nстрока3\n');
+    featureSha = repo.commit('правка после переименования');
+
+    repo.checkout('main');
+    repo.write(oldPath, 'строка1\nстрока2\nправка на main\n');
+    repo.commit('ещё правка на main');
+    try {
+      repo.git('merge', '--no-edit', 'feature');
+    } catch {
+      // Конфликт здесь и нужен: разрешение живёт в самом merge-коммите.
+    }
+    repo.write(newPath, 'строка1\nстрока2\nстрока3\nправка на main\n');
+    mergeSha = repo.commit('слияние feature');
+  });
+
+  afterAll(() => repo.dispose());
+
+  it('от ревизии, где файл переименован, показывает и то, что было после переименования', async () => {
+    // Панель открыли на файле рабочей копии — там он ещё под прежним именем.
+    const service = await serviceFor(oldPath);
+
+    const { entries } = await service.page(featureSha, undefined);
+
+    expect(subjects(entries)).toContain('правка после переименования');
+    expect(entries[0]?.path).toBe(newPath);
+  });
+
+  it('переходит через удаление и восстановление файла', async () => {
+    const service = await serviceFor(newPath);
+
+    const { entries } = await service.page(featureSha, undefined);
+
+    expect(subjects(entries)).toEqual([
+      'правка после переименования',
+      'переименование',
+      'восстановление файла',
+      'удаление файла',
+      'правка на main',
+      'создание файла',
+    ]);
+  });
+
+  it('помечает коммит переименования переименованием, а не рождением файла', async () => {
+    const service = await serviceFor(newPath);
+
+    const { entries } = await service.page(featureSha, undefined);
+    const renamed = entries.find((entry) => entry.subject === 'переименование');
+
+    expect(renamed).toMatchObject({ status: 'renamed', path: newPath, previousPath: oldPath });
+  });
+
+  it('показывает слияние, в котором конфликт разрешили правкой файла', async () => {
+    const service = await serviceFor(newPath);
+
+    const { entries } = await service.page(mergeSha, undefined);
+    const merge = entries.find((entry) => entry.subject === 'слияние feature');
+
+    expect(merge).toMatchObject({ merge: true });
+    // Что слияние сделало с файлом, видно не по числам в карточке, а по патчу.
+    const patch = await service.patch(merge as HistoryEntry, 3);
+    expect(patch.hunks.flatMap((hunk) => hunk.lines).some((line) => line.text === 'правка на main')).toBe(true);
+  });
+
+  it('история не теряется и при переезде файла в другую папку', async () => {
+    const movedPath = 'другая-папка/some-file-haha.ts';
+    repo.checkout('main');
+    // Переезд руками, без `git mv`: пару всё равно находит определение
+    // переименований по содержимому — как это обычно и происходит в жизни.
+    repo.write(movedPath, 'строка1\nстрока2\nстрока3\nправка на main\n');
+    repo.remove(newPath);
+    const movedSha = repo.commit('переезд в другую папку');
+    const service = await serviceFor(movedPath);
+
+    const { entries } = await service.page(movedSha, undefined);
+
+    expect(subjects(entries)).toContain('создание файла');
+    expect(entries[0]).toMatchObject({ status: 'renamed', previousPath: newPath });
+  });
+});

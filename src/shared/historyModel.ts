@@ -34,6 +34,11 @@ export interface HistoryEntry {
   readonly similarity?: number;
   /** Файла ещё нет в git: у него не с чем показывать разницу. */
   readonly untracked?: boolean;
+  /**
+   * Слияние. git не печатает для таких коммитов diff, поэтому чисел изменённых
+   * строк у карточки нет — что слияние сделало с файлом, видно в самой версии.
+   */
+  readonly merge?: boolean;
   readonly sha?: string;
   readonly shortSha?: string;
   readonly subject?: string;

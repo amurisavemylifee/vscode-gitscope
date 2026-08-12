@@ -33,6 +33,19 @@ interface EntryCardProps {
  */
 export function EntryCard({ entry, selected, first, last, onSelect }: EntryCardProps) {
   const working = entry.kind === 'working';
+
+  // У слияния git не печатает diff по файлу, поэтому чисел строк нет — нули
+  // вместо них означали бы «ничего не изменилось», а это неправда.
+  const stat = entry.merge ? (
+    <span className="gs-entry__note" title="Слияние: что оно сделало с файлом, видно в самой версии">
+      слияние
+    </span>
+  ) : entry.binary ? (
+    <span className="gs-entry__note">двоичный</span>
+  ) : (
+    <DiffStat insertions={entry.insertions} deletions={entry.deletions} compact />
+  );
+
   const classes = [
     'gs-entry',
     selected ? 'gs-entry--selected' : '',
@@ -94,11 +107,7 @@ export function EntryCard({ entry, selected, first, last, onSelect }: EntryCardP
             </>
           )}
           <span className="gs-entry__spacer" />
-          {entry.binary ? (
-            <span className="gs-entry__note">двоичный</span>
-          ) : (
-            <DiffStat insertions={entry.insertions} deletions={entry.deletions} compact />
-          )}
+          {stat}
         </div>
       </div>
     </div>

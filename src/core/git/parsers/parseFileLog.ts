@@ -5,10 +5,11 @@ import { parseStatusCode } from './parseNameStatus';
 
 /**
  * Формат заголовка коммита в истории файла: поля через NUL, запись закрывается
- * `\x01`. Отдельный от `LOG_FORMAT` формат нужен из-за `%D` — списка ссылок,
- * которые указывают на коммит.
+ * `\x01`. Отдельный от `LOG_FORMAT` формат нужен из-за `%D` — списка ссылок на
+ * коммит — и `%P`: по числу родителей видно слияние, для которого git не
+ * печатает diff.
  */
-export const FILE_LOG_FORMAT = ['%H', '%h', '%an', '%aI', '%D', '%s'].join('%x00') + '%x01';
+export const FILE_LOG_FORMAT = ['%H', '%h', '%an', '%aI', '%D', '%P', '%s'].join('%x00') + '%x01';
 
 /** Что коммит сделал с файлом. */
 export interface FileLogChange {
@@ -25,12 +26,14 @@ export interface FileLogChange {
 
 export interface FileLogCommit extends CommitInfo {
   readonly refs: readonly HistoryRef[];
+  /** У слияния несколько родителей — и никакого diff в выводе log. */
+  readonly merge: boolean;
   /** Отсутствует у слияний: для них git не печатает diff. */
   readonly change?: FileLogChange;
 }
 
 /**
- * Разбирает вывод `git log --follow --raw --numstat -z --format=FILE_LOG_FORMAT`.
+ * Разбирает вывод `git log --raw --numstat -z --format=FILE_LOG_FORMAT`.
  *
  * Одним вызовом git отдаёт про каждый коммит и статус (`--raw`), и числа
  * изменённых строк (`--numstat`) — вместе эти флаги работают, в отличие от
@@ -80,10 +83,10 @@ function tokenize(chunk: string): string[] {
   return tokens;
 }
 
-type FileLogHeader = CommitInfo & { readonly refs: readonly HistoryRef[] };
+type FileLogHeader = CommitInfo & { readonly refs: readonly HistoryRef[]; readonly merge: boolean };
 
 function parseHeader(tokens: readonly string[]): FileLogHeader | undefined {
-  const [sha, shortSha, authorName, authoredAt, refs, subject] = tokens;
+  const [sha, shortSha, authorName, authoredAt, refs, parents, subject] = tokens;
   // Последнее поле после завершающего NUL — пустая строка, а не коммит.
   if (!sha || !shortSha) {
     return undefined;
@@ -95,6 +98,7 @@ function parseHeader(tokens: readonly string[]): FileLogHeader | undefined {
     authoredAt: authoredAt ?? '',
     subject: subject ?? '',
     refs: parseHistoryRefs(refs ?? ''),
+    merge: (parents ?? '').split(' ').filter((parent) => parent !== '').length > 1,
   };
 }
 

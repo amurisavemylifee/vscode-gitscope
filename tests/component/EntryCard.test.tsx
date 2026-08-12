@@ -68,6 +68,13 @@ describe('EntryCard', () => {
     expect(screen.getByText('ещё не в git')).toBeInTheDocument();
   });
 
+  it('у слияния вместо нулей пишет, что это слияние', () => {
+    renderCard(commit({ merge: true, insertions: 0, deletions: 0 }));
+
+    expect(screen.getByText('слияние')).toBeInTheDocument();
+    expect(screen.queryByText('+0')).not.toBeInTheDocument();
+  });
+
   it('двоичному файлу вместо чисел строк пишет, что он двоичный', () => {
     renderCard(commit({ binary: true }));
 

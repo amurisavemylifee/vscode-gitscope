@@ -5,9 +5,16 @@ import { FILE_LOG_FORMAT, parseFileLog } from '../../src/core/git/parsers/parseF
  * Собирает вывод `git log --raw --numstat -z` так же, как это делает git:
  * заголовок, `\x01`, NUL, перевод строки, записи об изменении через NUL.
  */
-const header = (sha: string, refs = '', subject = 'тема') =>
-  [sha.repeat(40).slice(0, 40), sha.repeat(7).slice(0, 7), 'Аня', '2026-08-12T01:19:02+02:00', refs, subject].join('\0') +
-  '\x01\0\n';
+const header = (sha: string, refs = '', subject = 'тема', parents = 'p1') =>
+  [
+    sha.repeat(40).slice(0, 40),
+    sha.repeat(7).slice(0, 7),
+    'Аня',
+    '2026-08-12T01:19:02+02:00',
+    refs,
+    parents,
+    subject,
+  ].join('\0') + '\x01\0\n';
 
 const raw = (status: string, ...paths: string[]) =>
   `:100644 100644 aaaaaaa bbbbbbb ${status}\0${paths.join('\0')}\0`;
@@ -17,7 +24,7 @@ const numstat = (insertions: string, deletions: string, ...paths: string[]) =>
 
 describe('FILE_LOG_FORMAT', () => {
   it('перечисляет поля через NUL и закрывает запись \\x01', () => {
-    expect(FILE_LOG_FORMAT).toBe('%H%x00%h%x00%an%x00%aI%x00%D%x00%s%x01');
+    expect(FILE_LOG_FORMAT).toBe('%H%x00%h%x00%an%x00%aI%x00%D%x00%P%x00%s%x01');
   });
 });
 
@@ -93,7 +100,8 @@ describe('parseFileLog', () => {
   });
 
   it('слияние без diff не теряется, а приходит без изменений', () => {
-    const output = header('a', '', 'merge') + header('b', '', 'обычный') + raw('M', 'app.ts') + numstat('1', '1', 'app.ts');
+    const output =
+      header('a', '', 'merge', 'p1 p2') + header('b', '', 'обычный') + raw('M', 'app.ts') + numstat('1', '1', 'app.ts');
 
     const commits = parseFileLog(output);
 
@@ -101,6 +109,16 @@ describe('parseFileLog', () => {
     expect(commits[0]?.subject).toBe('merge');
     expect(commits[0]?.change).toBeUndefined();
     expect(commits[1]?.change?.path).toBe('app.ts');
+  });
+
+  it('слияние отличает по числу родителей', () => {
+    const merged = parseFileLog(header('a', '', 'слияние', 'p1 p2'));
+    const usual = parseFileLog(header('b', '', 'обычный', 'p1') + raw('M', 'app.ts') + numstat('1', '0', 'app.ts'));
+    const root = parseFileLog(header('c', '', 'первый коммит', '') + raw('A', 'app.ts') + numstat('3', '0', 'app.ts'));
+
+    expect(merged[0]?.merge).toBe(true);
+    expect(usual[0]?.merge).toBe(false);
+    expect(root[0]?.merge).toBe(false);
   });
 
   it('разбирает ветки, теги и текущую ветку из %D', () => {

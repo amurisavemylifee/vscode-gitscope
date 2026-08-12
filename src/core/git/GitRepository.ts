@@ -190,13 +190,11 @@ export class GitRepository {
   /**
    * История одного файла — коммиты, которые его меняли.
    *
-   * `--follow` ведёт историю через переименования: без него она обрывается на
-   * коммите, где файл сменил имя, и половина прошлого просто исчезает.
-   *
-   * Следующая страница берётся не через `--skip`, а сдвигом `revision` к
-   * родителю последнего показанного коммита: пропущенные коммиты `--follow` не
-   * разбирает, и если в пропуск попал сам коммит переименования, история под
-   * ним теряется целиком.
+   * Без `--follow`: он ведёт историю через переименования, но взамен молча
+   * выбрасывает слияния, а правка, приехавшая в ветку разрешением конфликта,
+   * живёт именно в merge-коммите. Переименования отслеживаются на слой выше —
+   * через `changesIn`, который видит коммит целиком и потому находит пары
+   * «удалено там, добавлено тут» даже когда `--follow` их не показывает.
    */
   async listFileHistory(
     path: string,
@@ -205,7 +203,6 @@ export class GitRepository {
     const output = await this.git.text(
       [
         'log',
-        '--follow',
         `--format=${FILE_LOG_FORMAT}`,
         // --raw даёт статус, --numstat — числа строк; вместе они работают, в
         // отличие от пары --name-status и --numstat, где побеждает последний.
@@ -223,6 +220,38 @@ export class GitRepository {
       { cwd: this.root, ...(signal ? { signal } : {}) },
     );
     return parseFileLog(output);
+  }
+
+  /**
+   * Что коммит сделал с деревом целиком, с определением переименований.
+   *
+   * Спрашивать без ограничения по пути обязательно: пара «удалено старое имя,
+   * добавлено новое» видна только когда git смотрит на весь коммит. С фильтром
+   * по одному пути переименование выглядит просто добавлением файла.
+   */
+  async changesIn(sha: string, options: AbortOption = {}): Promise<NameStatusEntry[]> {
+    const parent = (await this.firstParent(sha, options)) ?? EMPTY_TREE;
+    return this.diffNameStatus(parent, sha, options);
+  }
+
+  /**
+   * Последний коммит на пути к `revision`, в котором файл по этому пути исчез.
+   *
+   * Отсюда начинается поиск нового имени: если путь до ревизии не дожил, значит
+   * файл либо переименовали, либо удалили, и различить это можно только заглянув
+   * в сам коммит.
+   */
+  async lastCommitRemoving(revision: string, path: string, options: AbortOption = {}): Promise<string | undefined> {
+    const sha = await this.git.line(
+      ['log', '--format=%H', '--max-count=1', '--diff-filter=D', revision, '--', path],
+      { cwd: this.root, ...options },
+    );
+    return sha === '' ? undefined : sha;
+  }
+
+  /** Есть ли файл по такому пути на ревизии. */
+  async hasPath(revision: string, path: string, options: AbortOption = {}): Promise<boolean> {
+    return (await this.fileSize(revision, path, options)) !== undefined;
   }
 
   /** Родитель коммита; `undefined` у самого первого коммита в истории. */
@@ -378,6 +407,12 @@ export class GitRepository {
     return ['diff', '--no-color', '--no-ext-diff', '--no-textconv', '-M', '-C'];
   }
 }
+
+/**
+ * Пустое дерево git. С ним сравнивается первый коммит репозитория: родителя у
+ * него нет, а показать, что он добавил, всё равно надо.
+ */
+export const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
 /** Сколько байт от начала файла нюхать в поисках нуля. Столько же смотрит сам git. */
 const BINARY_SNIFF_BYTES = 8000;
