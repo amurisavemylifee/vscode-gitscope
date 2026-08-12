@@ -57,7 +57,7 @@ export function EntryCard({ entry, selected, first, last, onSelect }: EntryCardP
 
       <div className="gs-entry__body">
         <div className="gs-entry__row">
-          {entry.status === 'modified' ? null : <StatusBadge status={entry.status} />}
+          <StatusBadge status={entry.status} />
           <span className="gs-entry__subject" title={working ? undefined : entry.subject}>
             {working ? 'Рабочая копия' : entry.subject}
           </span>

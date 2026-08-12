@@ -38,9 +38,9 @@ describe('EntryCard', () => {
     expect(screen.getByText('−3')).toBeInTheDocument();
   });
 
-  it('обычную правку не помечает значком статуса, а остальные — помечает', () => {
+  it('помечает значком статуса каждую версию, включая обычную правку', () => {
     const { unmount } = renderCard(commit());
-    expect(screen.queryByLabelText('Файл изменён')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Файл изменён')).toBeInTheDocument();
     unmount();
 
     renderCard(commit({ status: 'added' }));
