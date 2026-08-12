@@ -22,16 +22,26 @@
 /* Все строки одной ширины — со всю самую длинную строку, а не с окно. Иначе при
    горизонтальной прокрутке подложка изменённой строки и полосы служебных строк
    обрываются на ширине окна, и от разметки остаётся пустота. Слагаемые — номера
-   и маркеры из сеток; --gs-split-code канва задаёт по самой длинной строке. */
+   и маркеры из сеток; --gs-code-width канва задаёт по самой длинной строке.
+   Ничего не округляем вверх: лишняя ширина — это прокрутка в пустоту. */
 .gs-diff__row,
 .gs-diff__hunk-header--unified,
 .gs-expander--unified {
-  min-width: calc(110px + var(--gs-split-code, 80ch));
+  min-width: calc(110px + var(--gs-code-width, 80ch));
+}
+
+/* Половина в двух колонках не уже 40 символов: на файле из одних коротких строк
+   колонки иначе схлопываются к левому краю. В одной колонке такой нижней
+   границы нет — там она обернулась бы прокруткой в пустоту. */
+.gs-split__row,
+.gs-diff__hunk-header--split,
+.gs-expander--split {
+  --gs-split-half: max(40ch, var(--gs-code-width, 80ch));
 }
 
 .gs-diff__hunk-header--split,
 .gs-expander--split {
-  min-width: calc(128px + 2 * var(--gs-split-code, 80ch));
+  min-width: calc(128px + 2 * var(--gs-split-half));
 }
 
 /* Содержимое служебных полос остаётся у левого края окна: полоса тянется на всю
@@ -170,14 +180,10 @@
   tab-size: 4;
 }
 
-/* Ширина половин одинакова во всех строках — иначе колонки разъезжаются.
-   --gs-split-code задаёт канва по самой длинной загруженной строке. */
+/* Ширина половин одинакова во всех строках — иначе колонки разъезжаются. */
 .gs-split__row {
   display: grid;
-  grid-template-columns: 46px 18px var(--gs-split-code, 80ch) 46px 18px var(
-      --gs-split-code,
-      80ch
-    );
+  grid-template-columns: 46px 18px var(--gs-split-half) 46px 18px var(--gs-split-half);
   min-height: var(--gs-line-height-code);
 }
 

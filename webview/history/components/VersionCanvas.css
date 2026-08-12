@@ -79,7 +79,7 @@
   display: grid;
   grid-template-columns: 56px 1fr;
   /* Строки одной ширины — со всю самую длинную: см. .gs-diff__row. */
-  min-width: calc(56px + var(--gs-split-code, 80ch));
+  min-width: calc(56px + var(--gs-code-width, 80ch));
   min-height: var(--gs-line-height-code);
   font-family: var(--gs-font-code);
   font-size: var(--gs-font-size-code);

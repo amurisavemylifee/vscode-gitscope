@@ -124,10 +124,10 @@ export function DiffCanvas({
       <div
         className={`gs-canvas gs-canvas--${viewMode}`}
         ref={scrollRef}
-        // Половины двух колонок обязаны быть одной ширины во всех строках,
-        // иначе колонки разъезжаются. Шрифт моноширинный, поэтому ширину
-        // самой длинной строки можно выразить в ch.
-        style={{ '--gs-split-code': `${Math.max(maxLineLength + 2, 40)}ch` } as React.CSSProperties}
+        // Ширина самой длинной строки: по ней выравниваются строки и половины
+        // двух колонок. Шрифт моноширинный, поэтому её можно выразить в ch;
+        // пара символов сверху — на правый отступ ячейки кода.
+        style={{ '--gs-code-width': `${maxLineLength + 2}ch` } as React.CSSProperties}
       >
         <div className="gs-canvas__list" style={{ height: `${virtualizer.getTotalSize()}px` }}>
           {items.map((item) => {
