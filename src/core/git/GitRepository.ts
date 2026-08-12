@@ -241,9 +241,28 @@ export class GitRepository {
    * файл либо переименовали, либо удалили, и различить это можно только заглянув
    * в сам коммит.
    */
-  async lastCommitRemoving(revision: string, path: string, options: AbortOption = {}): Promise<string | undefined> {
+  lastCommitRemoving(revision: string, path: string, options: AbortOption = {}): Promise<string | undefined> {
+    return this.lastCommitFiltered('D', revision, path, options);
+  }
+
+  /**
+   * Последний коммит на пути к `revision`, в котором файл по этому пути появился.
+   *
+   * Обратная сторона поиска: чтобы узнать, как файл назывался раньше, надо
+   * найти коммит, где нынешнее имя возникло, и посмотреть, не переезд ли это.
+   */
+  lastCommitAdding(revision: string, path: string, options: AbortOption = {}): Promise<string | undefined> {
+    return this.lastCommitFiltered('A', revision, path, options);
+  }
+
+  private async lastCommitFiltered(
+    filter: 'A' | 'D',
+    revision: string,
+    path: string,
+    options: AbortOption,
+  ): Promise<string | undefined> {
     const sha = await this.git.line(
-      ['log', '--format=%H', '--max-count=1', '--diff-filter=D', revision, '--', path],
+      ['log', '--format=%H', '--max-count=1', `--diff-filter=${filter}`, revision, '--', path],
       { cwd: this.root, ...options },
     );
     return sha === '' ? undefined : sha;

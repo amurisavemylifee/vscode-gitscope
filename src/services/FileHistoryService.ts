@@ -250,28 +250,39 @@ export class FileHistoryService {
    * Как файл называется на этой ревизии.
    *
    * Панель открывают на файле из рабочей копии, а смотреть историю можно от
-   * любой точки — и там файл может лежать под другим именем. Спрашивать git про
-   * сегодняшний путь в таком случае бессмысленно: он покажет историю только до
-   * переименования, а всё, что было после, потеряется.
+   * любой точки — и там файл вполне может лежать под другим именем. Спрашивать
+   * git про сегодняшний путь в таком случае бессмысленно: истории по нему там
+   * нет, и панель скажет «файл ни разу не попадал в коммиты», хотя файл тот же.
+   *
+   * Искать приходится в обе стороны. Ревизия новее переименования — имя надо
+   * вести вперёд, к тому, во что файл переехал. Ревизия старше — назад, к тому,
+   * как он назывался тогда.
    */
   private async pathAt(revision: string, options: { signal?: AbortSignal }): Promise<string> {
     if (await this.repository.hasPath(revision, this.path, options)) {
       return this.path;
     }
+    return (
+      (await this.pathRenamedTo(revision, options)) ?? (await this.pathRenamedFrom(revision, options)) ?? this.path
+    );
+  }
 
+  /** Во что переехал файл по пути к этой ревизии: она новее переименования. */
+  private async pathRenamedTo(revision: string, options: { signal?: AbortSignal }): Promise<string | undefined> {
     let current = this.path;
+
     for (let hop = 0; hop < MAX_RENAME_HOPS; hop += 1) {
       const removedAt = await this.repository.lastCommitRemoving(revision, current, options);
       if (removedAt === undefined) {
-        break;
+        return undefined;
       }
       const renamedTo = (await this.repository.changesIn(removedAt, options)).find(
         (entry) => entry.previousPath === current,
       )?.path;
       if (renamedTo === undefined) {
-        // Не переименование, а настоящее удаление: показываем историю этого
-        // пути до того коммита, где файл исчез.
-        break;
+        // Не переименование, а настоящее удаление: показывать историю этого
+        // пути до коммита, где файл исчез, — правильный ответ.
+        return undefined;
       }
       if (await this.repository.hasPath(revision, renamedTo, options)) {
         return renamedTo;
@@ -279,7 +290,46 @@ export class FileHistoryService {
       current = renamedTo;
     }
 
-    return this.path;
+    return undefined;
+  }
+
+  /**
+   * Как файл назывался до переезда: выбранная ревизия старше переименования.
+   *
+   * Идём от текущей ветки — там нынешнее имя и появилось, — и спускаемся по
+   * коммитам, где оно возникало, пока не найдём имя, живущее на этой ревизии.
+   */
+  private async pathRenamedFrom(revision: string, options: { signal?: AbortSignal }): Promise<string | undefined> {
+    let current = this.path;
+    let from = 'HEAD';
+
+    for (let hop = 0; hop < MAX_RENAME_HOPS; hop += 1) {
+      const addedAt = await this.repository.lastCommitAdding(from, current, options);
+      if (addedAt === undefined) {
+        return undefined;
+      }
+      const parent = await this.repository.firstParent(addedAt, options);
+      const renamedFrom = (await this.repository.changesIn(addedAt, options)).find(
+        (entry) => entry.path === current,
+      )?.previousPath;
+
+      if (parent === undefined) {
+        return undefined;
+      }
+      if (renamedFrom === undefined) {
+        // Файл здесь просто восстановили под тем же именем — переезд, если он
+        // был, надо искать глубже.
+        from = parent;
+        continue;
+      }
+      if (await this.repository.hasPath(revision, renamedFrom, options)) {
+        return renamedFrom;
+      }
+      current = renamedFrom;
+      from = parent;
+    }
+
+    return undefined;
   }
 
   /** Откуда файл переехал в этом коммите; `undefined` — он здесь и правда создан. */

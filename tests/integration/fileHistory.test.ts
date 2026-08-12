@@ -342,3 +342,89 @@ describe('FileHistoryService: удаление, восстановление, п
     expect(entries[0]).toMatchObject({ status: 'renamed', previousPath: newPath });
   });
 });
+
+/**
+ * Второй сценарий из отчёта: смотрим с ветки, где файл уже переименован, на
+ * старый коммит основной ветки — тот, который старше и удаления, и переезда.
+ *
+ *   main:    c1 ── c2 ── c3
+ *                         └─ feature: удаление ── восстановление ──
+ *                                     переименование ── правка 1 ── правка 2
+ *
+ * Раньше панель спрашивала git про сегодняшнее имя файла, которого на старом
+ * коммите никогда не было, и показывала «файл ни разу не попадал в коммиты».
+ */
+describe('FileHistoryService: взгляд с ветки на старый коммит основной', () => {
+  let repo: TestRepo;
+  const oldPath = 'some-folder/some-file.ts';
+  const newPath = 'some-folder/some-file-haha.ts';
+  let secondSha: string;
+  let firstSha: string;
+
+  beforeAll(() => {
+    repo = TestRepo.create();
+
+    repo.write(oldPath, 'строка1\n');
+    firstSha = repo.commit('коммит 1 на main');
+    repo.write(oldPath, 'строка1\nстрока2\n');
+    secondSha = repo.commit('коммит 2 на main');
+    repo.write(oldPath, 'строка1\nстрока2\nстрока3\n');
+    repo.commit('коммит 3 на main');
+
+    repo.checkout('feature', true);
+    repo.remove(oldPath);
+    repo.commit('удаление');
+    repo.write(oldPath, 'строка1\nстрока2\nстрока3\n');
+    repo.commit('восстановление');
+    repo.git('mv', oldPath, newPath);
+    repo.commit('переименование');
+    repo.write(newPath, 'строка1\nстрока2\nстрока3\nстрока4\n');
+    repo.commit('правка 1 после переименования');
+    repo.write(newPath, 'строка1\nстрока2\nстрока3\nстрока4\nстрока5\n');
+    repo.commit('правка 2 после переименования');
+  });
+
+  afterAll(() => repo.dispose());
+
+  /** Панель открыта на файле рабочей копии — на ветке он под новым именем. */
+  const service = async () =>
+    new FileHistoryService(await GitRepository.open(repo.root, new GitExecutor()), newPath);
+
+  it('на старом коммите основной ветки находит файл под прежним именем', async () => {
+    const { entries } = await (await service()).page(secondSha, undefined);
+
+    expect(entries.map((entry) => entry.subject)).toEqual(['коммит 2 на main', 'коммит 1 на main']);
+    expect(entries.every((entry) => entry.path === oldPath)).toBe(true);
+  });
+
+  it('содержимое старой версии читается под тем же прежним именем', async () => {
+    const instance = await service();
+    const { entries } = await instance.page(secondSha, undefined);
+
+    const version = await instance.version(entries[0] as HistoryEntry);
+
+    expect(version.path).toBe(oldPath);
+    expect(version.lines).toEqual(['строка1', 'строка2']);
+  });
+
+  it('на самом первом коммите история тоже не пропадает', async () => {
+    const { entries } = await (await service()).page(firstSha, undefined);
+
+    expect(entries.map((entry) => entry.subject)).toEqual(['коммит 1 на main']);
+  });
+
+  it('с вершины ветки история по-прежнему видна целиком', async () => {
+    const { entries } = await (await service()).page('feature', undefined);
+
+    expect(entries.map((entry) => entry.subject)).toEqual([
+      'правка 2 после переименования',
+      'правка 1 после переименования',
+      'переименование',
+      'восстановление',
+      'удаление',
+      'коммит 3 на main',
+      'коммит 2 на main',
+      'коммит 1 на main',
+    ]);
+  });
+});
