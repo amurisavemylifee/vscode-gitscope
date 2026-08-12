@@ -24,12 +24,21 @@
   white-space: nowrap;
 }
 
-/* Путь к папке приглушён: глаз ищет имя файла, а не дорогу к нему. */
+/* Путь к папке приглушён: глаз ищет имя файла, а не дорогу к нему. Обрезается
+   он с начала — ближние папки важнее дальних, — а это делается разворотом
+   направления письма. Слеш перед именем поэтому вынесен наружу: на границе
+   rtl-строки он как нейтральный символ перескочил бы в её начало. */
 .gs-history-header__directory {
   overflow: hidden;
   color: var(--gs-fg-muted);
   text-overflow: ellipsis;
   direction: rtl;
+}
+
+.gs-history-header__slash {
+  flex: none;
+  padding: 0 1px;
+  color: var(--gs-fg-muted);
 }
 
 .gs-history-header__name {

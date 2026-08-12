@@ -15,14 +15,21 @@ interface HistoryHeaderProps {
 export function HistoryHeader({ target, versionCount, hasMore, loading, onReload }: HistoryHeaderProps) {
   const segments = target?.path.split('/') ?? [];
   const name = segments.pop() ?? '';
-  const directory = segments.length > 0 ? `${segments.join('/')}/` : '';
+  const directory = segments.join('/');
 
   return (
     <header className="gs-history-header">
       <Icon name="history" size={15} className="gs-history-header__icon" />
 
       <span className="gs-history-header__path" title={target?.path}>
-        <span className="gs-history-header__directory">{directory}</span>
+        {directory === '' ? null : (
+          <>
+            <span className="gs-history-header__directory">{directory}</span>
+            {/* Слеш живёт отдельным элементом: внутри пути к папке он оказался бы
+                нейтральным символом на границе rtl-строки и уехал бы в её начало. */}
+            <span className="gs-history-header__slash">/</span>
+          </>
+        )}
         <span className="gs-history-header__name">{name}</span>
       </span>
 

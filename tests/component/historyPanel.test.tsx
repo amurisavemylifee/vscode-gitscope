@@ -228,9 +228,20 @@ describe('App истории', () => {
     render(<App />);
 
     await screen.findByText('app.ts');
-    expect(screen.getByText('src/')).toBeInTheDocument();
+    // Папка, разделитель и имя — три отдельных элемента: имя выделено, папка
+    // приглушена, а слеш не должен попадать в перевёрнутую строку пути.
+    expect(screen.getByText('src')).toBeInTheDocument();
+    expect(screen.getByText('/')).toBeInTheDocument();
     expect(screen.getByText('repo')).toBeInTheDocument();
     expect(screen.getByText('1 версия')).toBeInTheDocument();
+  });
+
+  it('у файла в корне репозитория лишнего слеша перед именем нет', async () => {
+    respondWith(state({ target: { path: 'README.md', repositoryRoot: '/repo', repositoryName: 'repo' } }));
+    render(<App />);
+
+    await screen.findByText('README.md');
+    expect(screen.queryByText('/')).not.toBeInTheDocument();
   });
 
   it('у неполного списка версий счётчик показывает, что это не всё', async () => {
