@@ -47,6 +47,8 @@ export type HistoryRequests = {
   };
   /** Открыть версию отдельной вкладкой редактора, только для чтения. */
   'history/open': { params: { readonly entryId: string }; result: null };
+  /** Открыть отдельной вкладкой сравнение версии с предыдущей. */
+  'history/openDiff': { params: { readonly entryId: string }; result: null };
   /** Положить полный SHA коммита в буфер обмена. */
   'history/copySha': { params: { readonly entryId: string }; result: null };
   /** Открыть нативный QuickPick для выбора точки истории. Результат придёт уведомлением. */

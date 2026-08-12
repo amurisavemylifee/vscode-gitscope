@@ -113,12 +113,19 @@ export function VersionHeader({
         </div>
       ) : null}
 
+      {/* Открывается то же, что показано: файл — версией, изменения — сравнением. */}
       <button
         type="button"
         className="gs-version-header__action"
-        title="Открыть эту версию отдельной вкладкой (Enter)"
+        title={
+          mode === 'content'
+            ? 'Открыть эту версию отдельной вкладкой (Enter)'
+            : 'Открыть эти изменения отдельной вкладкой (Enter)'
+        }
         onClick={onOpen}
       >
+        {/* Значок один: рядом стоит переключатель колонок, и вторая «полоса с
+            колонками» читалась бы как ещё один режим отображения. */}
         <Icon name="external" size={14} />
       </button>
     </header>

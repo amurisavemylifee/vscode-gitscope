@@ -204,6 +204,7 @@ describe('actions истории', () => {
   it('шлют команды в extension host', async () => {
     actions.reload();
     await actions.openVersion('abc');
+    await actions.openDiff('abc');
     await actions.copySha('abc');
 
     actions.pickRevision();
@@ -211,6 +212,7 @@ describe('actions истории', () => {
     expect(request.mock.calls.map((call) => call[0])).toEqual([
       'history/reload',
       'history/open',
+      'history/openDiff',
       'history/copySha',
       'history/pickRevision',
     ]);
@@ -436,6 +438,30 @@ describe('App истории', () => {
     await userEvent.click(await screen.findByTitle('Открыть эту версию отдельной вкладкой (Enter)'));
 
     expect(request).toHaveBeenCalledWith('history/open', { entryId: 'a'.repeat(40) });
+  });
+
+  it('в режиме изменений та же кнопка открывает вкладкой сравнение', async () => {
+    respondWith(state());
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Изменения' }));
+    await userEvent.click(await screen.findByTitle('Открыть эти изменения отдельной вкладкой (Enter)'));
+
+    expect(request).toHaveBeenCalledWith('history/openDiff', { entryId: 'a'.repeat(40) });
+    // Версию целиком в этом режиме не открывают: показано не её содержимое.
+    expect(request).not.toHaveBeenCalledWith('history/open', expect.anything());
+  });
+
+  it('Enter в списке открывает то же, что и кнопка шапки', async () => {
+    respondWith(state());
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Изменения' }));
+    const list = await screen.findByRole('listbox', { name: 'Версии файла' });
+    list.focus();
+    await userEvent.keyboard('{Enter}');
+
+    expect(request).toHaveBeenCalledWith('history/openDiff', { entryId: 'a'.repeat(40) });
   });
 
   it('копирование SHA живёт в карточке слева, а не в шапке версии', async () => {

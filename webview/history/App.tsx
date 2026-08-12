@@ -195,9 +195,16 @@ export function App() {
   const startResize = useResizer(listWidth, onListWidthChange, MIN_LIST_WIDTH, MAX_LIST_WIDTH);
 
   const selectEntry = useCallback((entry: HistoryEntry) => setSelectedId(entry.id), []);
-  const openEntry = useCallback((entry: HistoryEntry) => {
-    void actions.openVersion(entry.id).catch(() => undefined);
-  }, []);
+
+  // Открывается то, на что смотрим: содержимое версии или её сравнение с
+  // предыдущей. То же и по Enter в списке — это клавиша той же кнопки.
+  const openEntry = useCallback(
+    (entry: HistoryEntry) => {
+      const open = versionMode === 'content' ? actions.openVersion : actions.openDiff;
+      void open(entry.id).catch(() => undefined);
+    },
+    [versionMode],
+  );
   const copySha = useCallback((entry: HistoryEntry) => actions.copySha(entry.id), []);
 
   const header = (

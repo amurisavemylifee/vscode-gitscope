@@ -19,7 +19,7 @@ import {
 } from '@shared/messaging';
 import type { PanelSettings } from '@shared/protocol';
 import { FileHistoryService } from '../../services/FileHistoryService';
-import { fileVersionUri } from '../../services/FileVersionDocuments';
+import { emptyVersionUri, fileVersionUri } from '../../services/FileVersionDocuments';
 import { RevisionService } from '../../services/RevisionService';
 import { onPanelSettingsChanged, readPanelSettings } from '../../services/settings';
 import { pickRevision } from '../revisions/RevisionPicker';
@@ -168,6 +168,17 @@ export class HistoryPanel implements vscode.Disposable {
         return null;
       },
 
+      'history/openDiff': async ({ entryId }) => {
+        const context = this.requireContext();
+        const entry = this.requireEntry(entryId);
+        const { left, right, title } = await this.diffSides(context, entry);
+        await vscode.commands.executeCommand('vscode.diff', left, right, title, {
+          viewColumn: vscode.ViewColumn.Beside,
+          preview: true,
+        });
+        return null;
+      },
+
       'history/copySha': async ({ entryId }) => {
         const sha = this.requireEntry(entryId).sha;
         if (sha !== undefined) {
@@ -227,6 +238,49 @@ export class HistoryPanel implements vscode.Disposable {
       throw new Error('Этой версии нет в загруженной истории');
     }
     return entry;
+  }
+
+  /**
+   * Стороны вкладки сравнения: та же пара, что панель показывает в режиме
+   * «Изменения», — версия и то, из чего она получилась.
+   *
+   * Версия, где файла нет, — добавление, удаление, корневой коммит — заменяется
+   * пустой стороной: у git такой версии не спросишь, а сравнение с пустотой
+   * ровно это и означает.
+   */
+  private async diffSides(
+    context: HistoryContext,
+    entry: HistoryEntry,
+  ): Promise<{ left: vscode.Uri; right: vscode.Uri; title: string }> {
+    const root = context.repository.root;
+    const name = basename(entry.path);
+    const absent = () => emptyVersionUri(root, entry.path);
+
+    if (entry.kind === 'working') {
+      // Файла ещё нет в git — сравнивать рабочую копию не с чем, и про HEAD в
+      // таком репозитории спрашивать тоже незачем: его может не быть вовсе.
+      const fresh = entry.untracked === true || entry.status === 'added';
+      const head = fresh ? undefined : await context.repository.resolveCommit('HEAD');
+      return {
+        left: head === undefined ? absent() : fileVersionUri(root, entry.path, head.sha, head.shortSha),
+        right: entry.status === 'deleted' ? absent() : vscode.Uri.file(this.absolutePath(context)),
+        title: `${name}: изменения в рабочей копии`,
+      };
+    }
+
+    const sha = entry.sha ?? entry.id;
+    const parent = await context.repository.firstParent(sha);
+    // Переименованному файлу нужно прежнее имя: под нынешним в родителе его нет.
+    const previousPath = entry.previousPath ?? entry.path;
+
+    return {
+      left:
+        parent === undefined || entry.status === 'added'
+          ? emptyVersionUri(root, previousPath)
+          : fileVersionUri(root, previousPath, parent, parent.slice(0, 7)),
+      right: entry.status === 'deleted' ? absent() : fileVersionUri(root, entry.path, sha, entry.shortSha ?? sha),
+      title: `${name}: изменения в ${entry.shortSha ?? sha}`,
+    };
   }
 
   private absolutePath(context: HistoryContext): string {

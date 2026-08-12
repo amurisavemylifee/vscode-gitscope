@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { GitRepository } from '@core/git/GitRepository';
+import { EMPTY_TREE, GitRepository } from '@core/git/GitRepository';
 import type { Logger } from '@shared/logger';
 import type { RepositoryLocator } from './RepositoryLocator';
 
@@ -34,6 +34,17 @@ export function fileVersionUri(root: string, path: string, sha: string, shortSha
 }
 
 /**
+ * Сторона сравнения, где файла нет: он в этой версии ещё не появился или уже
+ * удалён.
+ *
+ * Отдельная ссылка, а не отсутствующая сторона: вкладке diff нужны два
+ * документа, и «файла тут нет» показывается пустой половиной, а не ошибкой.
+ */
+export function emptyVersionUri(root: string, path: string): vscode.Uri {
+  return fileVersionUri(root, path, EMPTY_TREE, 'пусто');
+}
+
+/**
  * Отдаёт содержимое версии файла редактору.
  *
  * Документ этой схемы редактор открывает только для чтения, поэтому случайно
@@ -48,6 +59,11 @@ export class FileVersionContentProvider implements vscode.TextDocumentContentPro
 
   async provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): Promise<string> {
     const query = JSON.parse(uri.query) as VersionQuery;
+    // Пустое дерево — сторона сравнения без файла. Спрашивать про него git
+    // бессмысленно: он ответит ошибкой на то, что ошибкой не является.
+    if (query.sha === EMPTY_TREE) {
+      return '';
+    }
     const controller = new AbortController();
     token.onCancellationRequested(() => controller.abort(new Error('Открытие версии отменено')));
 

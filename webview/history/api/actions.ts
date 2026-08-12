@@ -14,5 +14,6 @@ export const actions = {
   // ждёт ответа, а новая история приедет уведомлением.
   pickRevision: (): void => void bridge.request('history/pickRevision', {}).catch(() => undefined),
   openVersion: (entryId: string) => bridge.request('history/open', { entryId }),
+  openDiff: (entryId: string) => bridge.request('history/openDiff', { entryId }),
   copySha: (entryId: string) => bridge.request('history/copySha', { entryId }),
 };
