@@ -244,7 +244,7 @@ describe('buildPatchRows: свёрнутые промежутки', () => {
   it('у промежутка своя высота строки', () => {
     const [expander] = buildPatchRows(gapped(), undefined, 'unified', entry());
 
-    expect(versionRowHeight(expander as never, 19)).toBe(EXPANDER_ROW_HEIGHT);
+    expect(versionRowHeight(expander as never, 19, 80)).toBe(EXPANDER_ROW_HEIGHT);
   });
 });
 
@@ -252,7 +252,13 @@ describe('versionRowHeight', () => {
   it('строки кода занимают ровно строку', () => {
     const [row] = buildContentRows(version(), undefined);
 
-    expect(versionRowHeight(row as never, 19)).toBe(19);
+    expect(versionRowHeight(row as never, 19, 80)).toBe(19);
+  });
+
+  it('длинная строка файла занимает столько строк, на сколько перенеслась', () => {
+    const [row] = buildContentRows({ ...version(), lines: ['a'.repeat(25)] }, undefined);
+
+    expect(versionRowHeight(row as never, 19, 10)).toBe(57);
   });
 
   it('служебные строки и заголовки хунков имеют свои высоты', () => {
@@ -261,8 +267,8 @@ describe('versionRowHeight', () => {
     const shifted = patch({ hunks: [{ ...hunk(), baseStart: 5, compareStart: 5 }] });
     const header = buildPatchRows(shifted, undefined, 'unified', entry()).find((row) => row.kind === 'hunk');
 
-    expect(versionRowHeight(service as never, 19)).toBe(NOTICE_ROW_HEIGHT);
-    expect(header && versionRowHeight(header, 19)).toBe(HUNK_ROW_HEIGHT);
+    expect(versionRowHeight(service as never, 19, 80)).toBe(NOTICE_ROW_HEIGHT);
+    expect(header && versionRowHeight(header, 19, 80)).toBe(HUNK_ROW_HEIGHT);
   });
 
   it('строка без перевода в конце файла занимает две строки: под ней подпись', () => {
@@ -278,7 +284,7 @@ describe('versionRowHeight', () => {
     const unified = buildPatchRows(withNote, undefined, 'unified', entry());
     const split = buildPatchRows(withNote, undefined, 'split', entry());
 
-    expect(versionRowHeight(unified[0] as never, 19)).toBe(38);
-    expect(versionRowHeight(split[0] as never, 19)).toBe(38);
+    expect(versionRowHeight(unified[0] as never, 19, 80)).toBe(38);
+    expect(versionRowHeight(split[0] as never, 19, 80)).toBe(38);
   });
 });

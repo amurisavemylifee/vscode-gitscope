@@ -10,6 +10,7 @@ import {
   type ContextLine,
   type NoticeTone,
 } from '../diff/rows';
+import { visualLines } from '../diff/wrap';
 import { formatBytes } from '../format';
 import type { LineTokens, PatchTokens } from '../syntax/highlighter';
 
@@ -52,7 +53,8 @@ export type VersionRow =
 /** Строки версии, подгруженные по кнопке «развернуть»: номер строки → строка. */
 export type VersionContext = ReadonlyMap<number, ContextLine>;
 
-export function versionRowHeight(row: VersionRow, lineHeight: number): number {
+/** Строка кода занимает столько строк, на сколько кусков её разложил перенос. */
+export function versionRowHeight(row: VersionRow, lineHeight: number, columns: number): number {
   switch (row.kind) {
     case 'notice':
       return NOTICE_ROW_HEIGHT;
@@ -61,11 +63,18 @@ export function versionRowHeight(row: VersionRow, lineHeight: number): number {
     case 'expander':
       return EXPANDER_ROW_HEIGHT;
     case 'code':
-      return lineHeight;
+      return lineHeight * visualLines(row.text, columns);
     case 'line':
-      return row.line.noNewlineAtEof ? lineHeight * 2 : lineHeight;
-    case 'split':
-      return row.row.left?.line.noNewlineAtEof || row.row.right?.line.noNewlineAtEof ? lineHeight * 2 : lineHeight;
+      return lineHeight * (visualLines(row.line.text, columns) + (row.line.noNewlineAtEof ? 1 : 0));
+    case 'split': {
+      // Половины стоят рядом, поэтому строка высотой с ту, что перенеслась больше.
+      const wrapped = Math.max(
+        row.row.left ? visualLines(row.row.left.line.text, columns) : 1,
+        row.row.right ? visualLines(row.row.right.line.text, columns) : 1,
+      );
+      const note = row.row.left?.line.noNewlineAtEof || row.row.right?.line.noNewlineAtEof ? 1 : 0;
+      return lineHeight * (wrapped + note);
+    }
   }
 }
 

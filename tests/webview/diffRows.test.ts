@@ -165,11 +165,41 @@ describe('buildDiffRows', () => {
 
 describe('rowHeight', () => {
   const rows = build({ patches: new Map([['src/a.ts', ready()]]) }).rows;
+  /** Столько символов помещается в строку: короткие строки тестов в неё влезают. */
+  const COLUMNS = 80;
 
   it('строка кода занимает высоту строки', () => {
     const line = rows.find((row) => row.kind === 'line');
 
-    expect(line && rowHeight(line, 22)).toBe(22);
+    expect(line && rowHeight(line, 22, COLUMNS)).toBe(22);
+  });
+
+  it('длинная строка занимает столько строк, на сколько перенеслась', () => {
+    const long: DiffRow = {
+      kind: 'line',
+      key: 'x',
+      fileIndex: 0,
+      hunkIndex: 0,
+      lineIndex: 0,
+      line: { kind: 'insert', text: 'a'.repeat(25), compareLine: 1 },
+    };
+
+    expect(rowHeight(long, 20, 10)).toBe(60);
+  });
+
+  it('в двух колонках строка высотой с ту половину, что перенеслась больше', () => {
+    const split: DiffRow = {
+      kind: 'split',
+      key: 'x',
+      fileIndex: 0,
+      hunkIndex: 0,
+      row: {
+        left: { line: { kind: 'delete', text: 'a', baseLine: 1 }, index: 0 },
+        right: { line: { kind: 'insert', text: 'b'.repeat(21), compareLine: 1 }, index: 0 },
+      },
+    };
+
+    expect(rowHeight(split, 20, 10)).toBe(60);
   });
 
   it('строка без перевода в конце файла занимает две высоты', () => {
@@ -182,15 +212,15 @@ describe('rowHeight', () => {
       line: { kind: 'delete', text: 'a', baseLine: 1, noNewlineAtEof: true },
     };
 
-    expect(rowHeight(withNote, 20)).toBe(40);
+    expect(rowHeight(withNote, 20, COLUMNS)).toBe(40);
   });
 
   it('служебные строки имеют фиксированную высоту', () => {
     const fileRow = rows.find((row) => row.kind === 'file');
     const hunkRow: DiffRow = { kind: 'hunk', key: 'h', fileIndex: 0, hunkIndex: 0, hunk: hunk(1) };
 
-    expect(fileRow && rowHeight(fileRow, 19)).toBe(34);
-    expect(rowHeight(hunkRow, 19)).toBe(24);
+    expect(fileRow && rowHeight(fileRow, 19, COLUMNS)).toBe(34);
+    expect(rowHeight(hunkRow, 19, COLUMNS)).toBe(24);
   });
 });
 

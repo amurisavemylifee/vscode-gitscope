@@ -1,5 +1,5 @@
 import type { SplitCell } from '@shared/diff/splitRows';
-import type { DiffLine, Hunk, ViewMode } from '@shared/model';
+import type { DiffLine, Hunk } from '@shared/model';
 import { plural } from '@shared/time';
 import type { DiffRow } from '../diff/rows';
 import type { LineTokens } from '../syntax/highlighter';
@@ -20,19 +20,13 @@ const EXPAND_AT_ONCE = 24;
 /** Длиннее — кнопки «открыть всё» уже нет: это заметная пауза и много памяти. */
 const EXPAND_ALL_LIMIT = 1000;
 
-// Полоса заголовка тянется на всю ширину строк, а она зависит от режима: в двух
-// колонках это две половины, в одной — одна. Ширина задана в CSS, отсюда только
-// режим. Сам текст заголовка живёт в липкой обёртке: строки бывают шире окна, и
-// уехавший за левый край номер хунка не подсказывает уже ничего.
-export function HunkRow({ hunk, viewMode }: { readonly hunk: Hunk; readonly viewMode: ViewMode }) {
+export function HunkRow({ hunk }: { readonly hunk: Hunk }) {
   return (
-    <div className={`gs-diff__hunk-header gs-diff__hunk-header--${viewMode}`}>
-      <span className="gs-diff__sticky">
-        <span className="gs-diff__hunk-range">
-          @@ -{hunk.baseStart},{hunk.baseCount} +{hunk.compareStart},{hunk.compareCount} @@
-        </span>
-        {hunk.header ? <span className="gs-diff__hunk-context">{hunk.header}</span> : null}
+    <div className="gs-diff__hunk-header">
+      <span className="gs-diff__hunk-range">
+        @@ -{hunk.baseStart},{hunk.baseCount} +{hunk.compareStart},{hunk.compareCount} @@
       </span>
+      {hunk.header ? <span className="gs-diff__hunk-context">{hunk.header}</span> : null}
     </div>
   );
 }
@@ -112,65 +106,61 @@ function SplitSide({
  */
 export function ExpanderRow({
   row,
-  viewMode,
   onExpand,
 }: {
   /** Достаточно границ промежутка — их несут строки обеих панелей. */
   readonly row: { readonly compareStart: number; readonly compareEnd: number };
-  readonly viewMode: ViewMode;
   readonly onExpand: (from: number, to: number) => void;
 }) {
   const count = row.compareEnd - row.compareStart + 1;
 
   return (
-    <div className={`gs-expander gs-expander--${viewMode}`}>
-      <span className="gs-diff__sticky">
-        {count <= EXPAND_AT_ONCE ? (
+    <div className="gs-expander">
+      {count <= EXPAND_AT_ONCE ? (
+        <button
+          type="button"
+          className="gs-expander__button"
+          onClick={() => onExpand(row.compareStart, row.compareEnd)}
+        >
+          <Icon name="unfold" size={12} />
+          развернуть {count} {plural(count, ['строку', 'строки', 'строк'])}
+        </button>
+      ) : (
+        <>
           <button
             type="button"
             className="gs-expander__button"
-            onClick={() => onExpand(row.compareStart, row.compareEnd)}
+            title="Показать строки сверху промежутка"
+            onClick={() => onExpand(row.compareStart, row.compareStart + EXPAND_STEP - 1)}
           >
-            <Icon name="unfold" size={12} />
-            развернуть {count} {plural(count, ['строку', 'строки', 'строк'])}
+            <Icon name="chevron-up" size={12} />
+            {EXPAND_STEP}
           </button>
-        ) : (
-          <>
+          {count <= EXPAND_ALL_LIMIT ? (
             <button
               type="button"
               className="gs-expander__button"
-              title="Показать строки сверху промежутка"
-              onClick={() => onExpand(row.compareStart, row.compareStart + EXPAND_STEP - 1)}
+              onClick={() => onExpand(row.compareStart, row.compareEnd)}
             >
-              <Icon name="chevron-up" size={12} />
-              {EXPAND_STEP}
+              <Icon name="unfold" size={12} />
+              все {count}
             </button>
-            {count <= EXPAND_ALL_LIMIT ? (
-              <button
-                type="button"
-                className="gs-expander__button"
-                onClick={() => onExpand(row.compareStart, row.compareEnd)}
-              >
-                <Icon name="unfold" size={12} />
-                все {count}
-              </button>
-            ) : (
-              <span className="gs-expander__label">
-                скрыто {count} {plural(count, ['строка', 'строки', 'строк'])}
-              </span>
-            )}
-            <button
-              type="button"
-              className="gs-expander__button"
-              title="Показать строки снизу промежутка"
-              onClick={() => onExpand(row.compareEnd - EXPAND_STEP + 1, row.compareEnd)}
-            >
-              <Icon name="chevron-down" size={12} />
-              {EXPAND_STEP}
-            </button>
-          </>
-        )}
-      </span>
+          ) : (
+            <span className="gs-expander__label">
+              скрыто {count} {plural(count, ['строка', 'строки', 'строк'])}
+            </span>
+          )}
+          <button
+            type="button"
+            className="gs-expander__button"
+            title="Показать строки снизу промежутка"
+            onClick={() => onExpand(row.compareEnd - EXPAND_STEP + 1, row.compareEnd)}
+          >
+            <Icon name="chevron-down" size={12} />
+            {EXPAND_STEP}
+          </button>
+        </>
+      )}
     </div>
   );
 }

@@ -32,12 +32,12 @@ export function App() {
   const [treeWidth, setTreeWidth] = useState(stored.treeWidth ?? 260);
 
   const comparisonKey = summary ? `${summary.base.sha}..${summary.compare.sha}` : '';
-  const { patches, requestPatch, maxLineLength } = usePatches(comparisonKey);
+  const { patches, requestPatch } = usePatches(comparisonKey);
 
   const theme = useSyntaxTheme();
   const tokens = useSyntaxTokens(patches, theme);
   const lineHeight = useCodeLineHeight(theme);
-  const { context, expandContext, maxContextLength } = useExpandedContext(comparisonKey, theme);
+  const { context, expandContext } = useExpandedContext(comparisonKey, theme);
 
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
@@ -209,7 +209,7 @@ export function App() {
           expanded={expanded}
           collapseOverLines={settings.collapseFilesOverLines}
           lineHeight={lineHeight}
-          maxLineLength={Math.max(maxLineLength, maxContextLength)}
+          theme={theme}
           scrollTarget={scrollTarget}
           onToggleCollapse={toggleCollapse}
           onExpandLarge={expandLarge}

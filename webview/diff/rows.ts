@@ -4,6 +4,7 @@ import { plural } from '@shared/time';
 import type { PatchState } from '../hooks/usePatches';
 import type { LineTokens } from '../syntax/highlighter';
 import { formatBytes } from '../format';
+import { visualLines } from './wrap';
 
 export type NoticeTone = 'muted' | 'error' | 'warning';
 export type NoticeAction = 'retry' | 'expand';
@@ -94,7 +95,8 @@ export const NOTICE_ROW_HEIGHT = 32;
 export const HUNK_ROW_HEIGHT = 24;
 export const EXPANDER_ROW_HEIGHT = 26;
 
-export function rowHeight(row: DiffRow, lineHeight: number): number {
+/** Строка кода занимает столько строк, на сколько кусков её разложил перенос. */
+export function rowHeight(row: DiffRow, lineHeight: number, columns: number): number {
   switch (row.kind) {
     case 'file':
       return FILE_ROW_HEIGHT;
@@ -105,9 +107,16 @@ export function rowHeight(row: DiffRow, lineHeight: number): number {
     case 'expander':
       return EXPANDER_ROW_HEIGHT;
     case 'line':
-      return row.line.noNewlineAtEof ? lineHeight * 2 : lineHeight;
-    case 'split':
-      return row.row.left?.line.noNewlineAtEof || row.row.right?.line.noNewlineAtEof ? lineHeight * 2 : lineHeight;
+      return lineHeight * (visualLines(row.line.text, columns) + (row.line.noNewlineAtEof ? 1 : 0));
+    case 'split': {
+      // Половины стоят рядом, поэтому строка высотой с ту, что перенеслась больше.
+      const wrapped = Math.max(
+        row.row.left ? visualLines(row.row.left.line.text, columns) : 1,
+        row.row.right ? visualLines(row.row.right.line.text, columns) : 1,
+      );
+      const note = row.row.left?.line.noNewlineAtEof || row.row.right?.line.noNewlineAtEof ? 1 : 0;
+      return lineHeight * (wrapped + note);
+    }
   }
 }
 

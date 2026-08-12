@@ -14,19 +14,12 @@ export type PatchState =
  */
 export function usePatches(comparisonKey: string) {
   const [patches, setPatches] = useState<ReadonlyMap<string, PatchState>>(() => new Map());
-  /**
-   * Длина самой длинной загруженной строки в символах. Режиму двух колонок она
-   * нужна, чтобы задать одинаковую ширину половин: без общей ширины колонки
-   * разъезжались бы от строки к строке.
-   */
-  const [maxLineLength, setMaxLineLength] = useState(0);
   const requested = useRef<Set<string>>(new Set());
 
   // Сменилось сравнение — прежние патчи больше не про эти ревизии.
   useEffect(() => {
     requested.current = new Set();
     setPatches(new Map());
-    setMaxLineLength(0);
   }, [comparisonKey]);
 
   const update = useCallback((path: string, state: PatchState) => {
@@ -43,10 +36,7 @@ export function usePatches(comparisonKey: string) {
 
       bridge
         .request('comparison/patch', { path })
-        .then((patch) => {
-          update(path, { status: 'ready', patch });
-          setMaxLineLength((previous) => Math.max(previous, longestLine(patch)));
-        })
+        .then((patch) => update(path, { status: 'ready', patch }))
         .catch((error: unknown) => {
           // Даём возможность повторить: файл мог не загрузиться из-за отмены
           // при смене ревизий, а не из-за настоящей поломки.
@@ -57,17 +47,5 @@ export function usePatches(comparisonKey: string) {
     [update],
   );
 
-  return { patches, requestPatch, maxLineLength };
-}
-
-function longestLine(patch: FilePatch): number {
-  let longest = 0;
-  for (const hunk of patch.hunks) {
-    for (const line of hunk.lines) {
-      if (line.text.length > longest) {
-        longest = line.text.length;
-      }
-    }
-  }
-  return longest;
+  return { patches, requestPatch };
 }

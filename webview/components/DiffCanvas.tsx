@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { FileChange, ViewMode } from '@shared/model';
 import { buildDiffRows, rowHeight, type ContextStore, type DiffRow } from '../diff/rows';
+import { GUTTER_SPLIT, GUTTER_UNIFIED } from '../diff/wrap';
 import type { PatchState } from '../hooks/usePatches';
-import type { LineTokens, PatchTokens } from '../syntax/highlighter';
+import { useWrapColumns } from '../hooks/useWrapColumns';
+import type { LineTokens, PatchTokens, SyntaxTheme } from '../syntax/highlighter';
 import { ExpanderRow, HunkRow, LineRow, NoticeRow, SplitLineRow } from './DiffLines';
 import { FileHeaderRow } from './FileHeaderRow';
 import './DiffCanvas.css';
@@ -24,7 +26,8 @@ interface DiffCanvasProps {
   readonly expanded: ReadonlySet<string>;
   readonly collapseOverLines: number;
   readonly lineHeight: number;
-  readonly maxLineLength: number;
+  /** Нужна не подсветке, а замеру: вместе с темой меняется шрифт редактора. */
+  readonly theme: SyntaxTheme;
   readonly scrollTarget: ScrollTarget | null;
   readonly onToggleCollapse: (path: string) => void;
   readonly onExpandLarge: (path: string) => void;
@@ -54,7 +57,7 @@ export function DiffCanvas({
   expanded,
   collapseOverLines,
   lineHeight,
-  maxLineLength,
+  theme,
   scrollTarget,
   onToggleCollapse,
   onExpandLarge,
@@ -63,6 +66,11 @@ export function DiffCanvas({
   onVisibleFileChange,
 }: DiffCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const columns = useWrapColumns(
+    scrollRef,
+    viewMode === 'split' ? { gutter: GUTTER_SPLIT, halves: 2 } : { gutter: GUTTER_UNIFIED, halves: 1 },
+    theme,
+  );
 
   const { rows, fileRowIndex } = useMemo(
     () => buildDiffRows({ files, patches, context, viewMode, collapsed, expanded, collapseOverLines }),
@@ -74,7 +82,7 @@ export function DiffCanvas({
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) => {
       const row = rows[index];
-      return row ? rowHeight(row, lineHeight) : lineHeight;
+      return row ? rowHeight(row, lineHeight, columns) : lineHeight;
     },
     getItemKey: (index) => rows[index]?.key ?? index,
     overscan: 24,
@@ -84,10 +92,11 @@ export function DiffCanvas({
   const firstFileIndex = rows[items[0]?.index ?? 0]?.fileIndex ?? 0;
   const lastFileIndex = rows[items[items.length - 1]?.index ?? 0]?.fileIndex ?? 0;
 
-  // Перестроился список строк — прежние измерения к нему не относятся.
+  // Перестроился список строк или изменилась ширина переноса — прежние
+  // измерения к ним не относятся.
   useEffect(() => {
     virtualizer.measure();
-  }, [virtualizer, rows, lineHeight]);
+  }, [virtualizer, rows, lineHeight, columns]);
 
   useEffect(() => {
     const last = Math.min(files.length - 1, lastFileIndex + PREFETCH_FILES);
@@ -122,12 +131,11 @@ export function DiffCanvas({
   return (
     <div className="gs-canvas-wrapper">
       <div
-        className={`gs-canvas gs-canvas--${viewMode}`}
+        className="gs-canvas"
         ref={scrollRef}
-        // Ширина самой длинной строки: по ней выравниваются строки и половины
-        // двух колонок. Шрифт моноширинный, поэтому её можно выразить в ch;
-        // пара символов сверху — на правый отступ ячейки кода.
-        style={{ '--gs-code-width': `${maxLineLength + 2}ch` } as React.CSSProperties}
+        // Сколько символов помещается в строку: по этому же числу посчитаны
+        // высоты строк, поэтому вёрстка и расчёт переносят в одних местах.
+        style={{ '--gs-wrap-columns': columns } as React.CSSProperties}
       >
         <div className="gs-canvas__list" style={{ height: `${virtualizer.getTotalSize()}px` }}>
           {items.map((item) => {
@@ -145,7 +153,6 @@ export function DiffCanvas({
                   row={row}
                   files={files}
                   tokens={tokens}
-                  viewMode={viewMode}
                   onToggleCollapse={onToggleCollapse}
                   onExpandLarge={onExpandLarge}
                   onExpandContext={onExpandContext}
@@ -176,7 +183,6 @@ function RowContent({
   row,
   files,
   tokens,
-  viewMode,
   collapsed,
   onToggleCollapse,
   onExpandLarge,
@@ -186,7 +192,6 @@ function RowContent({
   readonly row: DiffRow;
   readonly files: readonly FileChange[];
   readonly tokens: ReadonlyMap<string, PatchTokens>;
-  readonly viewMode: ViewMode;
   readonly collapsed: ReadonlySet<string>;
   readonly onToggleCollapse: (path: string) => void;
   readonly onExpandLarge: (path: string) => void;
@@ -215,11 +220,9 @@ function RowContent({
         />
       );
     case 'hunk':
-      return <HunkRow hunk={row.hunk} viewMode={viewMode} />;
+      return <HunkRow hunk={row.hunk} />;
     case 'expander':
-      return (
-        <ExpanderRow row={row} viewMode={viewMode} onExpand={(from, to) => onExpandContext(file.path, from, to)} />
-      );
+      return <ExpanderRow row={row} onExpand={(from, to) => onExpandContext(file.path, from, to)} />;
     case 'line':
       return <LineRow line={row.line} tokens={row.tokens ?? hunkTokens(row.hunkIndex, row.lineIndex)} />;
     case 'split':

@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HistoryEntry } from '@shared/historyModel';
 import type { ViewMode } from '@shared/model';
 import { EmptyState } from '../components/EmptyState';
+import { GUTTER_CONTENT, GUTTER_SPLIT, GUTTER_UNIFIED } from '../diff/wrap';
 import { useCodeLineHeight } from '../hooks/useCodeLineHeight';
+import { useWrapColumns } from '../hooks/useWrapColumns';
 import { useResizer } from '../hooks/useResizer';
 import { useSyntaxTheme } from '../hooks/useSyntaxTokens';
 import { actions } from './api/actions';
@@ -16,7 +18,7 @@ import { useHistoryState } from './hooks/useHistoryState';
 import { useVersionContext } from './hooks/useVersionContext';
 import { useContentTokens, usePatchTokens } from './hooks/useVersionTokens';
 import { useVersions } from './hooks/useVersions';
-import { buildContentRows, buildPatchRows, noticeRows, type VersionRow } from './rows';
+import { buildContentRows, buildPatchRows, noticeRows } from './rows';
 import './App.css';
 
 interface StoredLayout {
@@ -27,6 +29,14 @@ interface StoredLayout {
 
 const MIN_LIST_WIDTH = 220;
 const MAX_LIST_WIDTH = 620;
+
+/** Жёлоб слева от кода: у просмотра файла он свой, у сравнения — как в панели сравнения. */
+const wrapMetrics = (versionMode: VersionMode, viewMode: ViewMode) => {
+  if (versionMode === 'content') {
+    return { gutter: GUTTER_CONTENT, halves: 1 };
+  }
+  return viewMode === 'split' ? { gutter: GUTTER_SPLIT, halves: 2 } : { gutter: GUTTER_UNIFIED, halves: 1 };
+};
 
 export function App() {
   const { ready, target, entries, hasMore, settings, error, loading, loadingMore, revision, loadMore } =
@@ -49,6 +59,12 @@ export function App() {
   const theme = useSyntaxTheme();
   const lineHeight = useCodeLineHeight(theme);
   const { context, expand, collapse } = useVersionContext(historyKey, theme);
+
+  // Ширина переноса нужна не только канве, но и полосе-обзору: она считает
+  // изменения в пикселях, а высота строки теперь зависит от переноса. Поэтому
+  // область прокрутки заводится здесь и передаётся канве.
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const columns = useWrapColumns(canvasRef, wrapMetrics(versionMode, effectiveViewMode), theme);
 
   // Список пришёл заново: держимся за прежний выбор, если он в нём остался, —
   // иначе перечитанная история сбрасывала бы просмотр на первую версию.
@@ -111,8 +127,7 @@ export function App() {
     effectiveViewMode,
   ]);
 
-  const maxLineLength = useMemo(() => longestRow(rows), [rows]);
-  const changes = useMemo(() => collectChanges(rows, lineHeight), [rows, lineHeight]);
+  const changes = useMemo(() => collectChanges(rows, lineHeight, columns), [rows, lineHeight, columns]);
 
   const [changeIndex, setChangeIndex] = useState(0);
   const [scrollTarget, setScrollTarget] = useState<ScrollTarget | null>(null);
@@ -311,10 +326,10 @@ export function App() {
             onOpen={() => selected && openEntry(selected)}
           />
           <VersionCanvas
+            scrollRef={canvasRef}
             rows={rows}
             lineHeight={lineHeight}
-            maxLineLength={maxLineLength}
-            viewMode={effectiveViewMode}
+            columns={columns}
             resetKey={`${selectedId ?? ''}:${versionMode}`}
             changes={changes}
             currentChange={changeIndex}
@@ -326,37 +341,4 @@ export function App() {
       </div>
     </div>
   );
-}
-
-/**
- * Самая длинная показанная строка.
- *
- * По ней канва задаёт ширину строк: половины двух колонок обязаны быть
- * одинаковой ширины, а подложки изменений — доходить до конца самой длинной
- * строки, а не обрываться на краю окна. Считается по готовым строкам, а не по
- * хункам патча: в просмотре файла целиком и в развёрнутых промежутках строки
- * свои, и патч про них ничего не знает.
- */
-function longestRow(rows: readonly VersionRow[]): number {
-  let longest = 0;
-
-  for (const row of rows) {
-    let length = 0;
-    switch (row.kind) {
-      case 'code':
-        length = row.text.length;
-        break;
-      case 'line':
-        length = row.line.text.length;
-        break;
-      case 'split':
-        length = Math.max(row.row.left?.line.text.length ?? 0, row.row.right?.line.text.length ?? 0);
-        break;
-    }
-    if (length > longest) {
-      longest = length;
-    }
-  }
-
-  return longest;
 }

@@ -5,6 +5,8 @@ import { changeAtOffset, collectChanges, NO_CHANGES, wrapChangeIndex } from '../
 import { buildPatchRows } from '../../webview/history/rows';
 
 const LINE = 20;
+/** Столько символов помещается в строку: короткие строки тестов в неё влезают. */
+const COLUMNS = 80;
 
 const entry = (): HistoryEntry => ({
   id: 'a',
@@ -42,7 +44,7 @@ const remove = (text: string, line: number): DiffLine => ({ kind: 'delete', text
 
 describe('collectChanges', () => {
   it('соседние изменённые строки считает одним изменением', () => {
-    const { blocks } = collectChanges(rowsOf([insert('первая', 1), insert('вторая', 2)]), LINE);
+    const { blocks } = collectChanges(rowsOf([insert('первая', 1), insert('вторая', 2)]), LINE, COLUMNS);
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0]).toMatchObject({ kind: 'insert', height: LINE * 2 });
@@ -51,18 +53,18 @@ describe('collectChanges', () => {
   it('изменения через контекст — это два разных изменения', () => {
     const rows = rowsOf([insert('первая', 1), context('вторая', 2), insert('третья', 3)]);
 
-    expect(collectChanges(rows, LINE).blocks).toHaveLength(2);
+    expect(collectChanges(rows, LINE, COLUMNS).blocks).toHaveLength(2);
   });
 
   it('удаление рядом со вставкой — одно смешанное изменение', () => {
-    const { blocks } = collectChanges(rowsOf([remove('было', 1), insert('стало', 1)]), LINE);
+    const { blocks } = collectChanges(rowsOf([remove('было', 1), insert('стало', 1)]), LINE, COLUMNS);
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0]?.kind).toBe('mixed');
   });
 
   it('удаления отмечает отдельным цветом', () => {
-    const { blocks } = collectChanges(rowsOf([remove('было', 1)]), LINE);
+    const { blocks } = collectChanges(rowsOf([remove('было', 1)]), LINE, COLUMNS);
 
     expect(blocks[0]?.kind).toBe('delete');
   });
@@ -70,7 +72,7 @@ describe('collectChanges', () => {
   it('запоминает, где изменение лежит в области прокрутки', () => {
     const rows = rowsOf([context('первая', 1), insert('вторая', 2)]);
 
-    const { blocks, total } = collectChanges(rows, LINE);
+    const { blocks, total } = collectChanges(rows, LINE, COLUMNS);
 
     // Строка контекста, за ней изменение.
     expect(blocks[0]).toMatchObject({ row: 1, top: LINE, height: LINE });
@@ -80,15 +82,15 @@ describe('collectChanges', () => {
   it('в двух колонках находит те же изменения, что и в одной', () => {
     const lines = [context('первая', 1), remove('было', 2), insert('стало', 2)];
 
-    const unified = collectChanges(rowsOf(lines, 'unified'), LINE).blocks;
-    const split = collectChanges(rowsOf(lines, 'split'), LINE).blocks;
+    const unified = collectChanges(rowsOf(lines, 'unified'), LINE, COLUMNS).blocks;
+    const split = collectChanges(rowsOf(lines, 'split'), LINE, COLUMNS).blocks;
 
     expect(split).toHaveLength(unified.length);
     expect(split[0]?.kind).toBe('mixed');
   });
 
   it('в просмотре файла целиком изменений нет', () => {
-    const { blocks } = collectChanges([{ kind: 'code', key: 'code:0', number: 1, text: 'первая' }], LINE);
+    const { blocks } = collectChanges([{ kind: 'code', key: 'code:0', number: 1, text: 'первая' }], LINE, COLUMNS);
 
     expect(blocks).toEqual([]);
   });
@@ -100,7 +102,7 @@ describe('collectChanges', () => {
       compareTotalLines: 9,
     };
 
-    const { blocks } = collectChanges(buildPatchRows(twoHunks, undefined, 'unified', entry()), LINE);
+    const { blocks } = collectChanges(buildPatchRows(twoHunks, undefined, 'unified', entry()), LINE, COLUMNS);
 
     expect(blocks).toHaveLength(2);
   });
@@ -112,6 +114,7 @@ describe('changeAtOffset', () => {
   const changes = collectChanges(
     rowsOf([insert('первая', 1), context('вторая', 2), context('третья', 3), insert('четвёртая', 4)]),
     LINE,
+    COLUMNS,
   );
 
   it('пока изменение не уехало за верхний край, счётчик стоит на нём', () => {
@@ -145,6 +148,7 @@ describe('changeAtOffset', () => {
         insert('десятая', 10),
       ]),
       LINE,
+      COLUMNS,
     );
     const viewport = LINE * 5;
 

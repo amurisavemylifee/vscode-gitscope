@@ -67,15 +67,6 @@ describe('usePatches', () => {
     await waitFor(() => expect(result.current.patches.get('a.ts')?.status).toBe('ready'));
   });
 
-  it('запоминает длину самой длинной строки — по ней выравниваются колонки', async () => {
-    request.mockResolvedValue(patch('a.ts', 'x'.repeat(137)));
-    const { result } = renderHook(() => usePatches('base..compare'));
-
-    act(() => result.current.requestPatch('a.ts'));
-
-    await waitFor(() => expect(result.current.maxLineLength).toBe(137));
-  });
-
   it('при смене сравнения сбрасывает всё загруженное', async () => {
     request.mockResolvedValue(patch('a.ts'));
     const { result, rerender } = renderHook(({ key }) => usePatches(key), {
@@ -88,7 +79,6 @@ describe('usePatches', () => {
     rerender({ key: 'второе' });
 
     await waitFor(() => expect(result.current.patches.size).toBe(0));
-    expect(result.current.maxLineLength).toBe(0);
   });
 });
 

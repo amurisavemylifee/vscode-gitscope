@@ -28,7 +28,7 @@ export const NO_CHANGES: Changes = { blocks: [], total: 0 };
  * виртуализатор: полосе-обзору нужны пиксели, а не номера строк, и брать их из
  * внутренностей виртуализатора значило бы держаться за его реализацию.
  */
-export function collectChanges(rows: readonly VersionRow[], lineHeight: number): Changes {
+export function collectChanges(rows: readonly VersionRow[], lineHeight: number, columns: number): Changes {
   const blocks: ChangeBlock[] = [];
   let offset = 0;
   let open: OpenBlock | null = null;
@@ -39,7 +39,7 @@ export function collectChanges(rows: readonly VersionRow[], lineHeight: number):
       continue;
     }
 
-    const height = versionRowHeight(row, lineHeight);
+    const height = versionRowHeight(row, lineHeight, columns);
     const marks = rowMarks(row);
 
     if (marks === undefined) {

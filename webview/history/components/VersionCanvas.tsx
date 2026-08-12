@@ -1,6 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, type RefObject } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import type { ViewMode } from '@shared/model';
 import { CodeText } from '../../components/CodeText';
 import { Icon } from '../../components/Icon';
 import { ExpanderRow, HunkRow, LineRow, SplitLineRow } from '../../components/DiffLines';
@@ -17,10 +16,12 @@ export interface ScrollTarget {
 }
 
 interface VersionCanvasProps {
+  /** Заводится в панели: ширину переноса по нему считает и полоса-обзор. */
+  readonly scrollRef: RefObject<HTMLDivElement | null>;
   readonly rows: readonly VersionRow[];
   readonly lineHeight: number;
-  readonly maxLineLength: number;
-  readonly viewMode: ViewMode;
+  /** Сколько символов кода помещается в строку — по нему считаются высоты. */
+  readonly columns: number;
   /** Смена значения возвращает прокрутку к началу: показывают уже другой файл. */
   readonly resetKey: string;
   readonly changes: Changes;
@@ -37,10 +38,10 @@ interface VersionCanvasProps {
  * десятки тысяч строк иначе кладёт webview ещё до того, как что-то покажет.
  */
 export function VersionCanvas({
+  scrollRef,
   rows,
   lineHeight,
-  maxLineLength,
-  viewMode,
+  columns,
   resetKey,
   changes,
   currentChange,
@@ -48,23 +49,22 @@ export function VersionCanvas({
   onCurrentChange,
   onExpand,
 }: VersionCanvasProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) => {
       const row = rows[index];
-      return row ? versionRowHeight(row, lineHeight) : lineHeight;
+      return row ? versionRowHeight(row, lineHeight, columns) : lineHeight;
     },
     getItemKey: (index) => rows[index]?.key ?? index,
     overscan: 24,
   });
 
-  // Перестроился список строк — прежние измерения к нему не относятся.
+  // Перестроился список строк или изменилась ширина переноса — прежние
+  // измерения к ним не относятся.
   useEffect(() => {
     virtualizer.measure();
-  }, [virtualizer, rows, lineHeight]);
+  }, [virtualizer, rows, lineHeight, columns]);
 
   useEffect(() => {
     virtualizer.scrollToOffset(0);
@@ -99,10 +99,9 @@ export function VersionCanvas({
       <div
         className="gs-version"
         ref={scrollRef}
-        // Ширина самой длинной строки: по ней выравниваются строки и половины
-        // двух колонок. Шрифт моноширинный, поэтому её можно выразить в ch;
-        // пара символов сверху — на правый отступ ячейки кода.
-        style={{ '--gs-code-width': `${maxLineLength + 2}ch` } as React.CSSProperties}
+        // Сколько символов помещается в строку: по этому же числу посчитаны
+        // высоты строк, поэтому вёрстка и расчёт переносят в одних местах.
+        style={{ '--gs-wrap-columns': columns } as React.CSSProperties}
       >
         <div className="gs-version__list" style={{ height: `${virtualizer.getTotalSize()}px` }}>
           {virtualizer.getVirtualItems().map((item) => {
@@ -116,7 +115,7 @@ export function VersionCanvas({
                 className="gs-version__row"
                 style={{ height: `${item.size}px`, transform: `translateY(${item.start}px)` }}
               >
-                <RowContent row={row} viewMode={viewMode} onExpand={onExpand} />
+                <RowContent row={row} onExpand={onExpand} />
               </div>
             );
           })}
@@ -167,11 +166,9 @@ function ChangeRuler({
 
 function RowContent({
   row,
-  viewMode,
   onExpand,
 }: {
   readonly row: VersionRow;
-  readonly viewMode: ViewMode;
   readonly onExpand: (startLine: number, endLine: number) => void;
 }) {
   switch (row.kind) {
@@ -180,9 +177,9 @@ function RowContent({
     case 'code':
       return <CodeLine number={row.number} text={row.text} tokens={row.tokens} />;
     case 'hunk':
-      return <HunkRow hunk={row.hunk} viewMode={viewMode} />;
+      return <HunkRow hunk={row.hunk} />;
     case 'expander':
-      return <ExpanderRow row={row} viewMode={viewMode} onExpand={onExpand} />;
+      return <ExpanderRow row={row} onExpand={onExpand} />;
     case 'line':
       return <LineRow line={row.line} tokens={row.tokens} />;
     case 'split':

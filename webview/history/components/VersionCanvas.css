@@ -63,23 +63,23 @@
   width: 100%;
 }
 
+/* Строки не бывают шире панели: длинные переносятся. */
 .gs-version__row {
   position: absolute;
   top: 0;
   left: 0;
-  /* Строка кода может быть шире панели: тогда она растягивает область
-     прокрутки, а короткие строки всё равно занимают всю видимую ширину. */
-  min-width: 100%;
-  width: max-content;
+  width: 100%;
 }
 
 /* --- строка файла целиком --- */
 
 .gs-code {
+  /* Ширина ячейки кода — ровно столько колонок, сколько насчитала панель:
+     см. .gs-diff__line в DiffLines.css. */
+  --gs-code-cell: calc(var(--gs-wrap-columns, 80) * 1ch + var(--gs-space-4) + 1px);
+
   display: grid;
-  grid-template-columns: 56px 1fr;
-  /* Строки одной ширины — со всю самую длинную: см. .gs-diff__row. */
-  min-width: calc(56px + var(--gs-code-width, 80ch));
+  grid-template-columns: 56px var(--gs-code-cell);
   min-height: var(--gs-line-height-code);
   font-family: var(--gs-font-code);
   font-size: var(--gs-font-size-code);
@@ -87,13 +87,8 @@
   tab-size: 4;
 }
 
-/* Номер строки остаётся на месте при горизонтальной прокрутке. */
 .gs-code__num {
-  position: sticky;
-  left: 0;
-  z-index: 1;
   padding: 0 12px 0 4px;
-  background-color: var(--gs-bg);
   color: var(--vscode-editorLineNumber-foreground, #6e7681);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
@@ -101,11 +96,13 @@
   user-select: none;
 }
 
+/* Длинная строка переносится, номер остаётся только у первой — см. diff/wrap.ts. */
 .gs-code__text {
   padding: 0 var(--gs-space-4) 0 0;
   background-color: rgba(0, 0, 0, 0);
   font: inherit;
-  white-space: pre;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 /* --- служебные строки --- */

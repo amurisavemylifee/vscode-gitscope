@@ -13,20 +13,14 @@
 .gs-canvas__list {
   position: relative;
   width: 100%;
-  /* Контейнер запросов: по нему заголовок файла узнаёт ширину окна. Меряем по
-     списку, а не по самой канве: его ширина — уже без вертикальной полосы
-     прокрутки, а у канвы 100cqw считалось бы вместе с ней. */
-  container-type: inline-size;
 }
 
+/* Строки не бывают шире окна: длинные переносятся. */
 .gs-canvas__row {
   position: absolute;
   top: 0;
   left: 0;
-  /* Строка кода может быть шире панели: тогда она растягивает область
-     прокрутки, а короткие строки всё равно занимают всю видимую ширину. */
-  min-width: 100%;
-  width: max-content;
+  width: 100%;
 }
 
 /* Липкая полоса с заголовком текущего файла. Лежит поверх списка, а не внутри
@@ -48,43 +42,14 @@
 /* --- заголовок файла --- */
 
 .gs-file-header {
-  height: 34px;
-  border-top: 1px solid var(--gs-border);
-  border-bottom: 1px solid var(--gs-border);
-  background: var(--gs-bg-raised);
-  /* Кегль как у кода: ширина полосы задана в ch, а ch считается по шрифту
-     самого элемента. Подписям шрифт возвращает .gs-file-header__body. */
-  font-family: var(--gs-font-code);
-  font-size: var(--gs-font-size-code);
-}
-
-.gs-file-header__body {
   display: flex;
   align-items: center;
   gap: var(--gs-space-2);
-  height: 100%;
+  height: 34px;
   padding: 0 var(--gs-space-3) 0 4px;
-  font-family: var(--gs-font-ui);
-  font-size: var(--gs-font-size-ui);
-}
-
-/* Полоса заголовка идёт на всю ширину строк, а не окна: иначе при
-   горизонтальной прокрутке она обрывается, и над кодом остаётся пустота.
-   Слагаемые те же, что у строк и полос хунков, — см. .gs-diff__row. */
-.gs-canvas--unified .gs-file-header {
-  min-width: calc(110px + var(--gs-code-width, 80ch));
-}
-
-.gs-canvas--split .gs-file-header {
-  min-width: calc(128px + 2 * max(40ch, var(--gs-code-width, 80ch)));
-}
-
-/* Само содержимое при этом остаётся в окне — как в липкой полосе сверху: имя
-   файла и счётчики нужны там, где на них смотрят, а не в начале строки. */
-.gs-canvas .gs-file-header__body {
-  position: sticky;
-  left: 0;
-  width: 100cqw;
+  border-top: 1px solid var(--gs-border);
+  border-bottom: 1px solid var(--gs-border);
+  background: var(--gs-bg-raised);
 }
 
 .gs-file-header--floating {
