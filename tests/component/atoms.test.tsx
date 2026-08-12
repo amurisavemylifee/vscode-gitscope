@@ -126,6 +126,12 @@ describe('FileHeaderRow', () => {
     expect(screen.queryByText('+12')).not.toBeInTheDocument();
   });
 
+  it('держит содержимое отдельно от полосы: она тянется, оно остаётся в окне', () => {
+    const { container } = render(<FileHeaderRow file={file()} collapsed={false} onToggle={vi.fn()} />);
+
+    expect(container.querySelector('.gs-file-header > .gs-file-header__body')).not.toBeNull();
+  });
+
   it('кнопка сворачивания отражает состояние и зовёт обработчик', async () => {
     const onToggle = vi.fn();
     render(<FileHeaderRow file={file()} collapsed onToggle={onToggle} />);
