@@ -21,7 +21,7 @@ import { ComparisonService } from '../../services/ComparisonService';
 import { RevisionService } from '../../services/RevisionService';
 import { onPanelSettingsChanged, readPanelSettings } from '../../services/settings';
 import { buildWebviewHtml, createWebviewTransport } from '../webview/host';
-import { pickRevision } from './RevisionPicker';
+import { pickRevision } from '../revisions/RevisionPicker';
 
 interface ComparisonContext {
   readonly repository: GitRepository;

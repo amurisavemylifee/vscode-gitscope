@@ -133,6 +133,7 @@ export function App() {
       versionCount={entries.length}
       hasMore={hasMore}
       loading={loading}
+      onPickRevision={actions.pickRevision}
       onReload={actions.reload}
     />
   );
@@ -177,7 +178,9 @@ export function App() {
           description={
             loading
               ? undefined
-              : 'Этот файл ещё ни разу не попадал в коммиты — показывать пока нечего.'
+              : // Точку истории видно в шапке, и без неё сообщение врало бы:
+                // на выбранной ревизии файла может не быть, а на соседней — есть.
+                `До «${target?.revision?.label ?? 'выбранной ревизии'}» этот файл ни разу не попадал в коммиты.`
           }
         />
       </div>

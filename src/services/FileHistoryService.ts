@@ -45,12 +45,12 @@ export class FileHistoryService {
   ) {}
 
   /**
-   * Страница истории. Без курсора — самая свежая, с курсором — то, что было до
-   * указанного коммита.
+   * Страница истории от точки `base`. Без курсора — самая свежая, с курсором —
+   * то, что было до указанного коммита.
    */
-  async page(cursor: HistoryCursor | undefined, signal?: AbortSignal): Promise<HistoryPage> {
+  async page(base: string, cursor: HistoryCursor | undefined, signal?: AbortSignal): Promise<HistoryPage> {
     const options = signal ? { signal } : {};
-    let revision = 'HEAD';
+    let revision = base;
     let path = this.path;
 
     if (cursor !== undefined) {

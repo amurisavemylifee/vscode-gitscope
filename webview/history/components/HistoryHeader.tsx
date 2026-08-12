@@ -1,6 +1,7 @@
 import type { HistoryTarget } from '@shared/historyModel';
 import { plural } from '@shared/time';
 import { Icon } from '../../components/Icon';
+import { RevisionButton } from '../../components/RevisionButton';
 import './HistoryHeader.css';
 
 interface HistoryHeaderProps {
@@ -8,11 +9,19 @@ interface HistoryHeaderProps {
   readonly versionCount: number;
   readonly hasMore: boolean;
   readonly loading: boolean;
+  readonly onPickRevision: () => void;
   readonly onReload: () => void;
 }
 
-/** Шапка панели: какой файл, в каком репозитории и сколько у него версий. */
-export function HistoryHeader({ target, versionCount, hasMore, loading, onReload }: HistoryHeaderProps) {
+/** Шапка панели: какой файл, в каком репозитории, откуда и сколько у него версий. */
+export function HistoryHeader({
+  target,
+  versionCount,
+  hasMore,
+  loading,
+  onPickRevision,
+  onReload,
+}: HistoryHeaderProps) {
   const segments = target?.path.split('/') ?? [];
   const name = segments.pop() ?? '';
   const directory = segments.join('/');
@@ -36,6 +45,14 @@ export function HistoryHeader({ target, versionCount, hasMore, loading, onReload
       {target ? <span className="gs-history-header__repository">{target.repositoryName}</span> : null}
 
       <span className="gs-history-header__spacer" />
+
+      {target ? (
+        <RevisionButton
+          revision={target.revision}
+          hint="С какой точки истории смотрим"
+          onClick={onPickRevision}
+        />
+      ) : null}
 
       {versionCount > 0 ? (
         <span className="gs-history-header__count">

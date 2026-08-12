@@ -5,7 +5,7 @@
  * webview, поэтому здесь только типы, без импортов из Node и `vscode`.
  */
 
-import type { ChangeStatus } from './model';
+import type { ChangeStatus, Revision } from './model';
 
 /** Ссылка, указывающая на коммит. `head` — ветка, на которой стоит HEAD. */
 export interface HistoryRef {
@@ -49,6 +49,12 @@ export interface HistoryTarget {
   readonly path: string;
   readonly repositoryRoot: string;
   readonly repositoryName: string;
+  /**
+   * Точка, с которой смотрим историю: показываются только коммиты, до которых
+   * от неё можно дойти. `null` — разрешить ревизию не удалось, например в
+   * репозитории, где ещё нет ни одного коммита.
+   */
+  readonly revision: Revision | null;
 }
 
 /** Содержимое файла на выбранной версии. */

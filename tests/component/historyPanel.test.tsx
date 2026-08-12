@@ -42,9 +42,11 @@ const commit = (overrides: Partial<HistoryEntry> = {}): HistoryEntry => ({
   ...overrides,
 });
 
+const revision = { spec: 'main', sha: 'f'.repeat(40), label: 'main', subject: 'последний коммит' };
+
 const state = (overrides: Partial<HistoryPanelState> = {}): HistoryPanelState => ({
   settings: { viewMode: 'unified', contextLines: 3, collapseFilesOverLines: 1500 },
-  target: { path: 'src/app.ts', repositoryRoot: '/repo', repositoryName: 'repo' },
+  target: { path: 'src/app.ts', repositoryRoot: '/repo', repositoryName: 'repo', revision },
   entries: [commit()],
   hasMore: false,
   error: null,
@@ -119,7 +121,7 @@ describe('useHistoryState', () => {
 
     act(() =>
       listeners.get('history/updated')?.({
-        target: { path: 'src/app.ts', repositoryRoot: '/repo', repositoryName: 'repo' },
+        target: { path: 'src/app.ts', repositoryRoot: '/repo', repositoryName: 'repo', revision },
         entries: [commit(), commit({ id: 'b', sha: 'b', subject: 'feat: кэш' })],
         hasMore: true,
       }),
@@ -199,7 +201,14 @@ describe('actions истории', () => {
     await actions.openVersion('abc');
     await actions.copySha('abc');
 
-    expect(request.mock.calls.map((call) => call[0])).toEqual(['history/reload', 'history/open', 'history/copySha']);
+    actions.pickRevision();
+
+    expect(request.mock.calls.map((call) => call[0])).toEqual([
+      'history/reload',
+      'history/open',
+      'history/copySha',
+      'history/pickRevision',
+    ]);
     expect(request.mock.calls[1]?.[1]).toEqual({ entryId: 'abc' });
   });
 
@@ -236,8 +245,27 @@ describe('App истории', () => {
     expect(screen.getByText('1 версия')).toBeInTheDocument();
   });
 
+  it('показывает точку истории и открывает пикер по клику', async () => {
+    respondWith(state());
+    render(<App />);
+
+    const button = await screen.findByRole('button', { name: /main/ });
+    expect(button).toHaveAttribute('title', expect.stringContaining('С какой точки истории смотрим'));
+
+    await userEvent.click(button);
+    expect(request).toHaveBeenCalledWith('history/pickRevision', {});
+  });
+
+  it('пустую историю объясняет через выбранную точку, а не вообще', async () => {
+    respondWith(state({ entries: [] }));
+    render(<App />);
+
+    await screen.findByText('У файла нет истории');
+    expect(screen.getByText('До «main» этот файл ни разу не попадал в коммиты.')).toBeInTheDocument();
+  });
+
   it('у файла в корне репозитория лишнего слеша перед именем нет', async () => {
-    respondWith(state({ target: { path: 'README.md', repositoryRoot: '/repo', repositoryName: 'repo' } }));
+    respondWith(state({ target: { path: 'README.md', repositoryRoot: '/repo', repositoryName: 'repo', revision } }));
     render(<App />);
 
     await screen.findByText('README.md');

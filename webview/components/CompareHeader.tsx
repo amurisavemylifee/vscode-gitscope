@@ -1,9 +1,10 @@
-import type { ComparisonSummary, Revision, Side, ViewMode } from '@shared/model';
+import type { ComparisonSummary, Side, ViewMode } from '@shared/model';
 import type { FetchInfo } from '@shared/protocol';
 import { formatRelativeTime } from '@shared/time';
 import { plural } from '@shared/time';
 import { DiffStat } from './DiffStat';
 import { Icon, type IconName } from './Icon';
+import { RevisionButton } from './RevisionButton';
 import './CompareHeader.css';
 
 interface CompareHeaderProps {
@@ -92,30 +93,6 @@ export function CompareHeader({
   );
 }
 
-function RevisionButton({
-  revision,
-  hint,
-  onClick,
-}: {
-  readonly revision: Revision | null;
-  readonly hint: string;
-  readonly onClick: () => void;
-}) {
-  const title = revision
-    ? [hint, revision.subject, revision.authorName, revision.sha.slice(0, 12)]
-        .filter((part) => part !== undefined && part !== '')
-        .join('\n')
-    : hint;
-
-  return (
-    <button type="button" className="gs-revision" title={title} onClick={onClick}>
-      <Icon name={revision ? iconForSpec(revision.spec) : 'commit'} />
-      <span className="gs-revision__label">{revision?.label ?? 'выбрать…'}</span>
-      <Icon name="chevron-down" size={12} className="gs-revision__caret" />
-    </button>
-  );
-}
-
 function ModeButton({
   active,
   icon,
@@ -154,15 +131,4 @@ function FetchStatus({ fetch, onFetch }: { readonly fetch: FetchInfo; readonly o
       </button>
     </span>
   );
-}
-
-/** Грубая эвристика для иконки: она подсказывает, а не утверждает. */
-function iconForSpec(spec: string): IconName {
-  if (/^[0-9a-f]{7,40}$/i.test(spec)) {
-    return 'commit';
-  }
-  if (spec.includes('/')) {
-    return 'remote';
-  }
-  return 'branch';
 }

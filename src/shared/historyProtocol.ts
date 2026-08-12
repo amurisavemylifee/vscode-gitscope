@@ -44,6 +44,8 @@ export type HistoryRequests = {
   'history/open': { params: { readonly entryId: string }; result: null };
   /** Положить полный SHA коммита в буфер обмена. */
   'history/copySha': { params: { readonly entryId: string }; result: null };
+  /** Открыть нативный QuickPick для выбора точки истории. Результат придёт уведомлением. */
+  'history/pickRevision': { params: Record<string, never>; result: null };
   /** Перечитать историю с диска. */
   'history/reload': { params: Record<string, never>; result: null };
 };

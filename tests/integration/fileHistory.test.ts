@@ -48,7 +48,7 @@ describe('FileHistoryService', () => {
 
   describe('page', () => {
     it('без курсора отдаёт историю от свежих версий к старым', async () => {
-      const { entries, hasMore } = await service.page(undefined);
+      const { entries, hasMore } = await service.page('HEAD', undefined);
 
       expect(entries.map((item) => item.subject)).toEqual(['замена строки', 'переименование', 'правка', 'создание']);
       expect(entries.every((item) => item.kind === 'commit')).toBe(true);
@@ -56,7 +56,7 @@ describe('FileHistoryService', () => {
     });
 
     it('заполняет данные карточки: автора, время, числа строк и ссылки', async () => {
-      const { entries } = await service.page(undefined);
+      const { entries } = await service.page('HEAD', undefined);
       const latest = entries[0];
 
       expect(latest).toMatchObject({
@@ -75,7 +75,7 @@ describe('FileHistoryService', () => {
     });
 
     it('помнит прежнее имя файла на коммите переименования', async () => {
-      const { entries } = await service.page(undefined);
+      const { entries } = await service.page('HEAD', undefined);
 
       expect(entry(entries, 'переименование')).toMatchObject({
         status: 'renamed',
@@ -87,22 +87,32 @@ describe('FileHistoryService', () => {
     });
 
     it('продолжает историю от курсора, не теряя её за переименованием', async () => {
-      const { entries } = await service.page(undefined);
+      const { entries } = await service.page('HEAD', undefined);
       const renamed = entry(entries, 'переименование');
 
       // Курсор на коммите переименования: ниже него файл назывался иначе, и
       // именно на этом месте история обрывалась бы при листании через --skip.
-      const next = await service.page({ sha: renamed?.sha ?? '', path: renamed?.previousPath ?? path });
+      const next = await service.page('HEAD', { sha: renamed?.sha ?? '', path: renamed?.previousPath ?? path });
 
       expect(next.entries.map((item) => item.subject)).toEqual(['правка', 'создание']);
       expect(next.entries.every((item) => item.path === oldPath)).toBe(true);
     });
 
+    it('от выбранной точки показывает только то, что было до неё', async () => {
+      const { entries } = await service.page('HEAD', undefined);
+      const renamed = entry(entries, 'переименование');
+
+      const fromRename = await service.page(renamed?.sha ?? '', undefined);
+
+      // «Замены строки» здесь быть не может: она случилась позже выбранной точки.
+      expect(fromRename.entries.map((item) => item.subject)).toEqual(['переименование', 'правка', 'создание']);
+    });
+
     it('под корневым коммитом истории больше нет', async () => {
-      const { entries } = await service.page(undefined);
+      const { entries } = await service.page('HEAD', undefined);
       const root = entry(entries, 'создание');
 
-      await expect(service.page({ sha: root?.sha ?? '', path: oldPath })).resolves.toEqual({
+      await expect(service.page('HEAD', { sha: root?.sha ?? '', path: oldPath })).resolves.toEqual({
         entries: [],
         hasMore: false,
       });
@@ -111,7 +121,7 @@ describe('FileHistoryService', () => {
 
   describe('version', () => {
     it('отдаёт содержимое файла на выбранном коммите', async () => {
-      const { entries } = await service.page(undefined);
+      const { entries } = await service.page('HEAD', undefined);
 
       const version = await service.version(entries[0] as HistoryEntry);
 
@@ -120,7 +130,7 @@ describe('FileHistoryService', () => {
     });
 
     it('на старой версии читает файл под прежним именем', async () => {
-      const { entries } = await service.page(undefined);
+      const { entries } = await service.page('HEAD', undefined);
 
       const version = await service.version(entry(entries, 'правка') as HistoryEntry);
 
@@ -146,7 +156,7 @@ describe('FileHistoryService', () => {
 
   describe('patch', () => {
     it('показывает, что версия изменила по сравнению с предыдущей', async () => {
-      const { entries } = await service.page(undefined);
+      const { entries } = await service.page('HEAD', undefined);
 
       const patch = await service.patch(entries[0] as HistoryEntry, 3);
       const lines = patch.hunks.flatMap((hunk) => hunk.lines);
@@ -158,7 +168,7 @@ describe('FileHistoryService', () => {
     });
 
     it('первый коммит сравнивается с пустотой, а не падает без родителя', async () => {
-      const { entries } = await service.page(undefined);
+      const { entries } = await service.page('HEAD', undefined);
 
       const patch = await service.patch(entry(entries, 'создание') as HistoryEntry, 3);
 
@@ -166,7 +176,7 @@ describe('FileHistoryService', () => {
     });
 
     it('у переименования видно оба имени и отсутствие правок', async () => {
-      const { entries } = await service.page(undefined);
+      const { entries } = await service.page('HEAD', undefined);
 
       const patch = await service.patch(entry(entries, 'переименование') as HistoryEntry, 3);
 
@@ -207,7 +217,7 @@ describe('FileHistoryService', () => {
       expect(working).toMatchObject({ untracked: true, status: 'added', insertions: 2, deletions: 0 });
 
       await expect(scratch.patch(working as HistoryEntry, 3)).resolves.toMatchObject({ hunks: [] });
-      await expect(scratch.page(undefined)).resolves.toEqual({ entries: [], hasMore: false });
+      await expect(scratch.page('HEAD', undefined)).resolves.toEqual({ entries: [], hasMore: false });
 
       repo.remove('notes/scratch.md');
     });

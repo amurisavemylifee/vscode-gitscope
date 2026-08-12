@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import type { GitRepository } from '@core/git/GitRepository';
 import type { HistoryEntry, HistoryTarget } from '@shared/historyModel';
+import type { Revision } from '@shared/model';
 import {
   HISTORY_PANEL_VIEW_TYPE,
   type HistoryNotifications,
@@ -19,13 +20,18 @@ import {
 import type { PanelSettings } from '@shared/protocol';
 import { FileHistoryService } from '../../services/FileHistoryService';
 import { fileVersionUri } from '../../services/FileVersionDocuments';
+import { RevisionService } from '../../services/RevisionService';
 import { onPanelSettingsChanged, readPanelSettings } from '../../services/settings';
+import { pickRevision } from '../revisions/RevisionPicker';
 import { buildWebviewHtml, createWebviewTransport } from '../webview/host';
 
 interface HistoryContext {
   readonly repository: GitRepository;
   readonly service: FileHistoryService;
-  readonly target: HistoryTarget;
+  readonly revisions: RevisionService;
+  readonly path: string;
+  /** Точка, с которой смотрим историю. Задаётся при первой загрузке. */
+  revision: Revision | null;
 }
 
 /**
@@ -109,11 +115,11 @@ export class HistoryPanel implements vscode.Disposable {
     this.context = {
       repository,
       service: new FileHistoryService(repository, path),
-      target: {
-        path,
-        repositoryRoot: repository.root,
-        repositoryName: basename(repository.root),
-      },
+      revisions: new RevisionService(repository),
+      path,
+      // Ревизия разрешается при загрузке: для этого нужен git, а конструктор
+      // контекста обязан оставаться синхронным.
+      revision: null,
     };
     await this.reload();
   }
@@ -125,13 +131,17 @@ export class HistoryPanel implements vscode.Disposable {
       'history/more': async (_params, signal): Promise<HistoryPage> => {
         const context = this.requireContext();
         const last = [...this.entries].reverse().find((entry) => entry.kind === 'commit' && entry.sha !== undefined);
-        if (last?.sha === undefined) {
+        if (last?.sha === undefined || context.revision === null) {
           return { entries: [], hasMore: false };
         }
 
         // Ниже коммита переименования файл жил под прежним именем — с ним и
         // надо продолжать обход.
-        const page = await context.service.page({ sha: last.sha, path: last.previousPath ?? last.path }, signal);
+        const page = await context.service.page(
+          context.revision.sha,
+          { sha: last.sha, path: last.previousPath ?? last.path },
+          signal,
+        );
         this.entries = [...this.entries, ...page.entries];
         this.hasMore = page.hasMore;
         return page;
@@ -163,6 +173,13 @@ export class HistoryPanel implements vscode.Disposable {
         return null;
       },
 
+      'history/pickRevision': () => {
+        // Не держим RPC открытым, пока пользователь листает список ревизий:
+        // результат придёт уведомлением об обновлении истории.
+        void this.pickAndApply();
+        return null;
+      },
+
       'history/reload': () => {
         void this.reload();
         return null;
@@ -173,11 +190,24 @@ export class HistoryPanel implements vscode.Disposable {
   private snapshot(): HistoryPanelState {
     return {
       settings: this.settings,
-      target: this.context?.target ?? null,
+      target: this.target(),
       entries: this.entries,
       hasMore: this.hasMore,
       error: this.failure,
       loading: this.loading,
+    };
+  }
+
+  private target(): HistoryTarget | null {
+    const context = this.context;
+    if (!context) {
+      return null;
+    }
+    return {
+      path: context.path,
+      repositoryRoot: context.repository.root,
+      repositoryName: basename(context.repository.root),
+      revision: context.revision,
     };
   }
 
@@ -197,7 +227,25 @@ export class HistoryPanel implements vscode.Disposable {
   }
 
   private absolutePath(context: HistoryContext): string {
-    return vscode.Uri.joinPath(vscode.Uri.file(context.repository.root), ...context.target.path.split('/')).fsPath;
+    return vscode.Uri.joinPath(vscode.Uri.file(context.repository.root), ...context.path.split('/')).fsPath;
+  }
+
+  private async pickAndApply(): Promise<void> {
+    const context = this.context;
+    if (!context) {
+      return;
+    }
+
+    const picked = await pickRevision(context.revisions, {
+      title: `История «${basename(context.path)}» — с какой точки смотреть`,
+      ...(context.revision !== null ? { current: context.revision.spec } : {}),
+    });
+
+    if (!picked) {
+      return;
+    }
+    context.revision = picked;
+    await this.reload();
   }
 
   private async reload(): Promise<void> {
@@ -212,13 +260,26 @@ export class HistoryPanel implements vscode.Disposable {
 
     this.loading = true;
     this.rpc.notify('history/loading', { loading: true });
-    this.panel.title = `GitScope: история ${basename(context.target.path)}`;
+    this.panel.title = `GitScope: история ${basename(context.path)}`;
 
     try {
+      const signal = controller.signal;
+
+      // Точка по умолчанию — текущая ветка, а не голый HEAD: у неё говорящая
+      // подпись, по которой видно, откуда смотрим.
+      if (context.revision === null) {
+        const branch = await context.repository.currentBranch({ signal });
+        context.revision = await context.revisions.resolve(branch ?? 'HEAD', signal);
+      }
+      const head = await context.repository.resolveCommit('HEAD', { signal });
+
       // Рабочая копия и первая страница истории независимы — считаем разом.
       const [working, page] = await Promise.all([
-        context.service.workingEntry(controller.signal),
-        context.service.page(undefined, controller.signal),
+        // Рабочая копия — это состояние диска, а не точка истории. Рядом с
+        // историей от старой ревизии она была бы просто неправдой, поэтому
+        // показывается только когда смотрим от текущего состояния ветки.
+        context.revision.sha === head.sha ? context.service.workingEntry(signal) : Promise.resolve(undefined),
+        context.service.page(context.revision.sha, undefined, signal),
       ]);
       if (controller.signal.aborted) {
         return;
@@ -227,7 +288,7 @@ export class HistoryPanel implements vscode.Disposable {
       this.entries = working ? [working, ...page.entries] : [...page.entries];
       this.hasMore = page.hasMore;
       this.failure = null;
-      this.rpc.notify('history/updated', { target: context.target, entries: this.entries, hasMore: this.hasMore });
+      this.rpc.notify('history/updated', { target: this.target(), entries: this.entries, hasMore: this.hasMore });
     } catch (error) {
       if (controller.signal.aborted) {
         return;

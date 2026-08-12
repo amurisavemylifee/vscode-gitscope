@@ -1,0 +1,30 @@
+.gs-revision {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--gs-space-2);
+  max-width: 34ch;
+  padding: 3px 6px 3px 8px;
+  border: 1px solid var(--gs-border);
+  border-radius: var(--gs-radius-md);
+  background: var(--gs-bg);
+  transition: background 80ms ease, border-color 80ms ease;
+}
+
+.gs-revision:hover {
+  border-color: var(--gs-accent);
+  background: var(--gs-bg-hover);
+}
+
+.gs-revision__label {
+  overflow: hidden;
+  font-family: var(--gs-font-code);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-revision__caret {
+  flex: none;
+  color: var(--gs-fg-muted);
+}

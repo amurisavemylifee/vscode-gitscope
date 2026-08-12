@@ -3,7 +3,7 @@ import type { Logger } from '@shared/logger';
 import { RevisionService } from '../../services/RevisionService';
 import type { RepositoryLocator } from '../../services/RepositoryLocator';
 import { ComparePanel } from './ComparePanel';
-import { pickRevision } from './RevisionPicker';
+import { pickRevision } from '../revisions/RevisionPicker';
 
 /**
  * Аргументы команды. Все необязательные: без них расширение спрашивает само.
