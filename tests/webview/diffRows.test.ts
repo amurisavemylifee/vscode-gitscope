@@ -235,6 +235,48 @@ describe('промежутки между хунками', () => {
     expect(line).toMatchObject({ tokens });
   });
 
+  it('развёрнутый целиком промежуток убирает заголовок хунка', () => {
+    const filled = Array.from({ length: 9 }, (_, index) => [index + 1, { text: `строка ${index + 1}` }] as const);
+    const rows = withGaps({ context: new Map([['src/a.ts', new Map(filled)]]) }).rows;
+
+    // Строки 1–9 и хунк с десятой идут подряд: заголовку между ними делить нечего.
+    expect(kinds(rows)).toEqual(['file', ...Array<string>(11).fill('line'), 'expander']);
+  });
+
+  it('заголовок второго хунка исчезает, когда промежуток перед ним развернули', () => {
+    const rows = build({
+      patches: new Map([
+        ['src/a.ts', ready({ hunks: [hunkAt(10, 2), hunkAt(15, 2)], compareTotalLines: 20, baseTotalLines: 20 })],
+      ]),
+      context: new Map([['src/a.ts', new Map([[12, { text: 'двенадцатая' }], [13, { text: 'тринадцатая' }], [14, { text: 'четырнадцатая' }]])]]),
+    }).rows;
+
+    // Первый хунк заголовок сохраняет: над ним ещё свёрнутые строки 1–9.
+    expect(kinds(rows)).toEqual([
+      'file',
+      'expander',
+      'hunk',
+      'line',
+      'line',
+      'line',
+      'line',
+      'line',
+      'line',
+      'line',
+      'expander',
+    ]);
+  });
+
+  it('у обрезанного патча заголовки хунков остаются: промежутки там неизвестны', () => {
+    const rows = build({
+      patches: new Map([
+        ['src/a.ts', ready({ hunks: [hunkAt(10, 2)], compareTotalLines: 20, truncated: true })],
+      ]),
+    }).rows;
+
+    expect(kinds(rows)).toContain('hunk');
+  });
+
   it('у обрезанного патча кнопок разворота нет — промежутки посчитались бы неверно', () => {
     const rows = build({
       patches: new Map([

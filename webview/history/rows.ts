@@ -145,12 +145,20 @@ export function buildPatchRows(
    * на остальное вешаем кнопку разворачивания. У обрезанного патча промежутков
    * нет вовсе: его хунки не описывают файл целиком, и границы посчитались бы
    * неправильно.
+   *
+   * Возвращает, остались ли в промежутке скрытые строки: по этому заголовок
+   * следующего хунка решает, показываться ли ему.
    */
-  const emitGap = (from: number, to: number, baseFrom: number, gapIndex: number) => {
-    if (from > to || patch.truncated) {
-      return;
+  const emitGap = (from: number, to: number, baseFrom: number, gapIndex: number): boolean => {
+    // У обрезанного патча промежутки неизвестны — считаем, что скрытое есть.
+    if (patch.truncated) {
+      return true;
+    }
+    if (from > to) {
+      return false;
     }
     const baseOffset = baseFrom - from;
+    let hidden = false;
 
     let cursor = from;
     while (cursor <= to) {
@@ -167,21 +175,32 @@ export function buildPatchRows(
           compareEnd: end,
           baseOffset,
         });
+        hidden = true;
         cursor = end + 1;
         continue;
       }
       pushContextLine(rows, viewMode, cursor, cursor + baseOffset, available);
       cursor += 1;
     }
+    return hidden;
   };
 
   let previousEnd = 0;
   let previousBaseEnd = 0;
 
   patch.hunks.forEach((hunk, hunkIndex) => {
-    emitGap(previousEnd + 1, hunk.compareStart - 1, previousBaseEnd + 1, hunkIndex);
+    const gapFrom = previousEnd + 1;
+    const gapTo = hunk.compareStart - 1;
+    const hidden = emitGap(gapFrom, gapTo, previousBaseEnd + 1, hunkIndex);
 
-    rows.push({ kind: 'hunk', key: `hunk:${hunkIndex}`, hunk });
+    // Заголовок хунка говорит о пропущенных строках. Если промежуток развернули
+    // целиком, строки над ним и под ним идут подряд, и полоса посреди сплошного
+    // кода делит его без причины. Первый хунк без промежутка сверху — не «продолжение»
+    // чего-то, там заголовок остаётся началом изменений.
+    const continuesPrevious = hunkIndex > 0 || gapFrom <= gapTo;
+    if (hidden || !continuesPrevious) {
+      rows.push({ kind: 'hunk', key: `hunk:${hunkIndex}`, hunk });
+    }
     const hunkTokens = tokens?.hunks[hunkIndex];
 
     if (viewMode === 'split') {

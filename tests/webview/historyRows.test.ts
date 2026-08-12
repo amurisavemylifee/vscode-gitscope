@@ -203,13 +203,28 @@ describe('buildPatchRows: свёрнутые промежутки', () => {
     expect(rows[2]).toMatchObject({ kind: 'line', line: { text: 'четвёртая', compareLine: 4 } });
   });
 
-  it('развёрнутый целиком промежуток не оставляет кнопок', () => {
+  it('развёрнутый целиком промежуток не оставляет ни кнопок, ни заголовка хунка', () => {
     const context = new Map([1, 2, 3, 4].map((line) => [line, { text: `строка ${line}` }]));
 
     const rows = buildPatchRows(gapped(), undefined, 'unified', entry(), context);
 
+    // Строки 1–4 и хунк с пятой идут подряд: разделять их нечем и незачем.
     expect(rows.slice(0, 4).every((row) => row.kind === 'line')).toBe(true);
-    expect(rows[4]).toMatchObject({ kind: 'hunk' });
+    expect(rows[4]).toMatchObject({ kind: 'line', line: { compareLine: 5 } });
+  });
+
+  it('пока в промежутке остались скрытые строки, заголовок хунка на месте', () => {
+    const context = new Map([[4, { text: 'четвёртая' }]]);
+
+    const rows = buildPatchRows(gapped(), undefined, 'unified', entry(), context);
+
+    expect(rows.some((row) => row.kind === 'hunk')).toBe(true);
+  });
+
+  it('обрезанный патч сохраняет заголовки: промежутки там неизвестны', () => {
+    const rows = buildPatchRows(gapped({ truncated: true }), undefined, 'unified', entry());
+
+    expect(rows.some((row) => row.kind === 'hunk')).toBe(true);
   });
 
   it('в двух колонках строка промежутка одинакова с обеих сторон', () => {

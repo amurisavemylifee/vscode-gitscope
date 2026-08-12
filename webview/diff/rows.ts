@@ -200,12 +200,20 @@ export function buildDiffRows({
      * контекст, на остальное вешаем кнопку «развернуть». Обрезанный патч
      * разворачивать нельзя: его хунки не описывают файл целиком, и
      * промежутки посчитались бы неправильно.
+     *
+     * Возвращает, остались ли в промежутке скрытые строки: по этому заголовок
+     * следующего хунка решает, показываться ли ему.
      */
-    const emitGap = (compareFrom: number, compareTo: number, baseFrom: number, gapIndex: number) => {
-      if (compareFrom > compareTo || patch.truncated) {
-        return;
+    const emitGap = (compareFrom: number, compareTo: number, baseFrom: number, gapIndex: number): boolean => {
+      // У обрезанного патча промежутки неизвестны — считаем, что скрытое есть.
+      if (patch.truncated) {
+        return true;
+      }
+      if (compareFrom > compareTo) {
+        return false;
       }
       const baseOffset = baseFrom - compareFrom;
+      let hidden = false;
 
       let cursor = compareFrom;
       while (cursor <= compareTo) {
@@ -223,6 +231,7 @@ export function buildDiffRows({
             compareEnd: end,
             baseOffset,
           });
+          hidden = true;
           cursor = end + 1;
           continue;
         }
@@ -244,15 +253,25 @@ export function buildDiffRows({
         });
         cursor += 1;
       }
+      return hidden;
     };
 
     let previousCompareEnd = 0;
     let previousBaseEnd = 0;
 
     patch.hunks.forEach((hunk, hunkIndex) => {
-      emitGap(previousCompareEnd + 1, hunk.compareStart - 1, previousBaseEnd + 1, hunkIndex);
+      const gapFrom = previousCompareEnd + 1;
+      const gapTo = hunk.compareStart - 1;
+      const hidden = emitGap(gapFrom, gapTo, previousBaseEnd + 1, hunkIndex);
 
-      rows.push({ kind: 'hunk', key: `hunk:${file.path}:${hunkIndex}`, fileIndex, hunkIndex, hunk });
+      // Заголовок хунка говорит о пропущенных строках. Если промежуток развернули
+      // целиком, строки над ним и под ним идут подряд, и полоса посреди сплошного
+      // кода делит его без причины. Первый хунк без промежутка сверху — не «продолжение»
+      // чего-то, там заголовок остаётся началом изменений.
+      const continuesPrevious = hunkIndex > 0 || gapFrom <= gapTo;
+      if (hidden || !continuesPrevious) {
+        rows.push({ kind: 'hunk', key: `hunk:${file.path}:${hunkIndex}`, fileIndex, hunkIndex, hunk });
+      }
 
       if (viewMode === 'split') {
         buildSplitRows(hunk.lines).forEach((row, rowIndex) => {
