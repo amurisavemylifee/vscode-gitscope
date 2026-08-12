@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FileChange, FilePatch, Hunk } from '@shared/model';
-import { buildDiffRows, rowHeight, type DiffRow } from '../../webview/diff/rows';
+import { buildDiffRows, rowAtOffset, rowHeight, type DiffRow } from '../../webview/diff/rows';
 import type { PatchState } from '../../webview/hooks/usePatches';
 
 const file = (overrides: Partial<FileChange> = {}): FileChange => ({
@@ -160,6 +160,36 @@ describe('buildDiffRows', () => {
     }).rows;
 
     expect(new Set(rows.map((row) => row.key)).size).toBe(rows.length);
+  });
+});
+
+describe('rowAtOffset', () => {
+  // Виртуализатор отдаёт строки с запасом: первые две — выше верхнего края.
+  const items = [
+    { index: 10, end: 100 },
+    { index: 11, end: 140 },
+    { index: 12, end: 160 },
+    { index: 13, end: 220 },
+  ];
+
+  it('берёт первую видимую строку, а не первую отрисованную', () => {
+    expect(rowAtOffset(items, 150)).toBe(12);
+  });
+
+  it('строку, у которой низ ровно на краю, считает уехавшей', () => {
+    expect(rowAtOffset(items, 140)).toBe(12);
+  });
+
+  it('в начале списка отдаёт первую строку', () => {
+    expect(rowAtOffset(items, 0)).toBe(10);
+  });
+
+  it('если весь запас уехал вверх, держится за последнюю строку', () => {
+    expect(rowAtOffset(items, 5000)).toBe(13);
+  });
+
+  it('на пустом списке отдаёт начало', () => {
+    expect(rowAtOffset([], 100)).toBe(0);
   });
 });
 

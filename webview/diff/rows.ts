@@ -120,6 +120,25 @@ export function rowHeight(row: DiffRow, lineHeight: number, columns: number): nu
   }
 }
 
+/** Что нужно знать о строке виртуализатора: какая она по счёту и где кончается. */
+interface RowBounds {
+  readonly index: number;
+  readonly end: number;
+}
+
+/**
+ * Строка под верхним краем области — та, что сейчас перед глазами.
+ *
+ * Виртуализатор отдаёт строки с запасом сверху и снизу, поэтому первая в его
+ * списке — вовсе не первая видимая. Считать по ней значило бы отставать
+ * заголовком файла и подсветкой в дереве на весь запас, а при разной высоте
+ * строк — каждый раз на разное число пикселей.
+ */
+export function rowAtOffset(items: readonly RowBounds[], offset: number): number {
+  const visible = items.find((item) => item.end > offset) ?? items[items.length - 1];
+  return visible?.index ?? 0;
+}
+
 /** Последняя строка хунка на каждой стороне. Пустой хунк «заканчивается» на своей стартовой строке. */
 export const endOf = (start: number, count: number) => (count === 0 ? start : start + count - 1);
 

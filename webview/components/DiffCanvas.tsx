@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { FileChange, ViewMode } from '@shared/model';
-import { buildDiffRows, rowHeight, type ContextStore, type DiffRow } from '../diff/rows';
+import { buildDiffRows, rowAtOffset, rowHeight, type ContextStore, type DiffRow } from '../diff/rows';
 import { GUTTER_SPLIT, GUTTER_UNIFIED } from '../diff/wrap';
 import type { PatchState } from '../hooks/usePatches';
 import { useWrapColumns } from '../hooks/useWrapColumns';
@@ -89,7 +89,10 @@ export function DiffCanvas({
   });
 
   const items = virtualizer.getVirtualItems();
-  const firstFileIndex = rows[items[0]?.index ?? 0]?.fileIndex ?? 0;
+  // Файл, который сейчас перед глазами: и липкая полоса сверху, и подсветка в
+  // дереве показывают его, а не тот, что виртуализатор отрисовал про запас.
+  const firstFileIndex = rows[rowAtOffset(items, virtualizer.scrollOffset ?? 0)]?.fileIndex ?? 0;
+  // Подгружать, наоборот, стоит и запас: он подъедет к экрану следующим.
   const lastFileIndex = rows[items[items.length - 1]?.index ?? 0]?.fileIndex ?? 0;
 
   // Перестроился список строк или изменилась ширина переноса — прежние
