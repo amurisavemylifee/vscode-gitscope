@@ -204,7 +204,7 @@ describe('actions истории', () => {
   it('шлют команды в extension host', async () => {
     actions.reload();
     await actions.openVersion('abc');
-    await actions.openDiff('abc');
+    await actions.openDiff('abc', 'split');
     await actions.copySha('abc');
 
     actions.pickRevision();
@@ -447,9 +447,20 @@ describe('App истории', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Изменения' }));
     await userEvent.click(await screen.findByTitle('Открыть эти изменения отдельной вкладкой (Enter)'));
 
-    expect(request).toHaveBeenCalledWith('history/openDiff', { entryId: 'a'.repeat(40) });
+    expect(request).toHaveBeenCalledWith('history/openDiff', { entryId: 'a'.repeat(40), viewMode: 'unified' });
     // Версию целиком в этом режиме не открывают: показано не её содержимое.
     expect(request).not.toHaveBeenCalledWith('history/open', expect.anything());
+  });
+
+  it('вкладку сравнения просит открыть той же раскладкой, что выбрана в панели', async () => {
+    respondWith(state());
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Изменения' }));
+    await userEvent.click(await screen.findByTitle('Двумя колонками'));
+    await userEvent.click(await screen.findByTitle('Открыть эти изменения отдельной вкладкой (Enter)'));
+
+    expect(request).toHaveBeenCalledWith('history/openDiff', { entryId: 'a'.repeat(40), viewMode: 'split' });
   });
 
   it('Enter в списке открывает то же, что и кнопка шапки', async () => {
@@ -461,7 +472,7 @@ describe('App истории', () => {
     list.focus();
     await userEvent.keyboard('{Enter}');
 
-    expect(request).toHaveBeenCalledWith('history/openDiff', { entryId: 'a'.repeat(40) });
+    expect(request).toHaveBeenCalledWith('history/openDiff', { entryId: 'a'.repeat(40), viewMode: 'unified' });
   });
 
   it('копирование SHA живёт в карточке слева, а не в шапке версии', async () => {

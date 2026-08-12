@@ -1,3 +1,4 @@
+import type { ViewMode } from '@shared/model';
 import { bridge } from './bridge';
 
 /**
@@ -14,6 +15,8 @@ export const actions = {
   // ждёт ответа, а новая история приедет уведомлением.
   pickRevision: (): void => void bridge.request('history/pickRevision', {}).catch(() => undefined),
   openVersion: (entryId: string) => bridge.request('history/open', { entryId }),
-  openDiff: (entryId: string) => bridge.request('history/openDiff', { entryId }),
+  // Раскладку шлём свою: вкладка сравнения открывается тем же числом колонок,
+  // каким изменения показаны в панели.
+  openDiff: (entryId: string, viewMode: ViewMode) => bridge.request('history/openDiff', { entryId, viewMode }),
   copySha: (entryId: string) => bridge.request('history/copySha', { entryId }),
 };

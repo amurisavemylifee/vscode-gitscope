@@ -38,6 +38,9 @@ export function App() {
   const [listWidth, setListWidth] = useState(stored.listWidth ?? 320);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // Пока в панели не переключали колонки, смотрим так, как велит настройка.
+  const effectiveViewMode = viewMode ?? settings.viewMode;
+
   // Ключ жизни кэша: другой файл — другие версии, перечитанная история —
   // другое содержимое рабочей копии.
   const historyKey = `${target?.repositoryRoot ?? ''}:${target?.path ?? ''}:${revision}`;
@@ -94,7 +97,7 @@ export function App() {
     if (versionMode === 'content') {
       return version ? buildContentRows(version, contentTokens) : [];
     }
-    return patch ? buildPatchRows(patch, patchTokens, viewMode ?? settings.viewMode, selected, entryContext) : [];
+    return patch ? buildPatchRows(patch, patchTokens, effectiveViewMode, selected, entryContext) : [];
   }, [
     selected,
     versionMode,
@@ -105,8 +108,7 @@ export function App() {
     contentTokens,
     patchTokens,
     entryContext,
-    viewMode,
-    settings.viewMode,
+    effectiveViewMode,
   ]);
 
   const maxLineLength = useMemo(() => longestRow(rows), [rows]);
@@ -197,13 +199,15 @@ export function App() {
   const selectEntry = useCallback((entry: HistoryEntry) => setSelectedId(entry.id), []);
 
   // Открывается то, на что смотрим: содержимое версии или её сравнение с
-  // предыдущей. То же и по Enter в списке — это клавиша той же кнопки.
+  // предыдущей, и той же раскладкой. То же и по Enter в списке — это клавиша
+  // той же кнопки.
   const openEntry = useCallback(
     (entry: HistoryEntry) => {
-      const open = versionMode === 'content' ? actions.openVersion : actions.openDiff;
-      void open(entry.id).catch(() => undefined);
+      const opened =
+        versionMode === 'content' ? actions.openVersion(entry.id) : actions.openDiff(entry.id, effectiveViewMode);
+      void opened.catch(() => undefined);
     },
-    [versionMode],
+    [versionMode, effectiveViewMode],
   );
   const copySha = useCallback((entry: HistoryEntry) => actions.copySha(entry.id), []);
 
@@ -296,7 +300,7 @@ export function App() {
           <VersionHeader
             entry={selected}
             mode={versionMode}
-            viewMode={viewMode ?? settings.viewMode}
+            viewMode={effectiveViewMode}
             changeCount={changes.blocks.length}
             changeIndex={changeIndex}
             expandMode={expandMode}
@@ -310,7 +314,7 @@ export function App() {
             rows={rows}
             lineHeight={lineHeight}
             maxLineLength={maxLineLength}
-            viewMode={viewMode ?? settings.viewMode}
+            viewMode={effectiveViewMode}
             resetKey={`${selectedId ?? ''}:${versionMode}`}
             changes={changes}
             currentChange={changeIndex}

@@ -21,7 +21,7 @@ import type { PanelSettings } from '@shared/protocol';
 import { FileHistoryService } from '../../services/FileHistoryService';
 import { emptyVersionUri, fileVersionUri } from '../../services/FileVersionDocuments';
 import { RevisionService } from '../../services/RevisionService';
-import { onPanelSettingsChanged, readPanelSettings } from '../../services/settings';
+import { applyDiffLayout, onPanelSettingsChanged, readPanelSettings } from '../../services/settings';
 import { pickRevision } from '../revisions/RevisionPicker';
 import { buildWebviewHtml, createWebviewTransport } from '../webview/host';
 
@@ -168,10 +168,12 @@ export class HistoryPanel implements vscode.Disposable {
         return null;
       },
 
-      'history/openDiff': async ({ entryId }) => {
+      'history/openDiff': async ({ entryId, viewMode }) => {
         const context = this.requireContext();
         const entry = this.requireEntry(entryId);
         const { left, right, title } = await this.diffSides(context, entry);
+        // Раскладку задаём до открытия: вкладка читает настройку, когда рисуется.
+        await applyDiffLayout(viewMode);
         await vscode.commands.executeCommand('vscode.diff', left, right, title, {
           viewColumn: vscode.ViewColumn.Beside,
           preview: true,
