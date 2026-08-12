@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import type { ViewMode } from '@shared/model';
 import { CodeText } from '../../components/CodeText';
 import { Icon } from '../../components/Icon';
 import { HunkRow, LineRow, SplitLineRow } from '../../components/DiffLines';
@@ -12,6 +13,7 @@ interface VersionCanvasProps {
   readonly rows: readonly VersionRow[];
   readonly lineHeight: number;
   readonly maxLineLength: number;
+  readonly viewMode: ViewMode;
   /** Смена значения возвращает прокрутку к началу: показывают уже другой файл. */
   readonly resetKey: string;
 }
@@ -22,7 +24,7 @@ interface VersionCanvasProps {
  * Строки виртуализованы по тем же причинам, что и в панели сравнения: файл на
  * десятки тысяч строк иначе кладёт webview ещё до того, как что-то покажет.
  */
-export function VersionCanvas({ rows, lineHeight, maxLineLength, resetKey }: VersionCanvasProps) {
+export function VersionCanvas({ rows, lineHeight, maxLineLength, viewMode, resetKey }: VersionCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -66,7 +68,7 @@ export function VersionCanvas({ rows, lineHeight, maxLineLength, resetKey }: Ver
               className="gs-version__row"
               style={{ height: `${item.size}px`, transform: `translateY(${item.start}px)` }}
             >
-              <RowContent row={row} />
+              <RowContent row={row} viewMode={viewMode} />
             </div>
           );
         })}
@@ -75,14 +77,14 @@ export function VersionCanvas({ rows, lineHeight, maxLineLength, resetKey }: Ver
   );
 }
 
-function RowContent({ row }: { readonly row: VersionRow }) {
+function RowContent({ row, viewMode }: { readonly row: VersionRow; readonly viewMode: ViewMode }) {
   switch (row.kind) {
     case 'notice':
       return <Notice tone={row.tone} text={row.text} />;
     case 'code':
       return <CodeLine number={row.number} text={row.text} tokens={row.tokens} />;
     case 'hunk':
-      return <HunkRow hunk={row.hunk} />;
+      return <HunkRow hunk={row.hunk} viewMode={viewMode} />;
     case 'line':
       return <LineRow line={row.line} tokens={row.tokens} />;
     case 'split':

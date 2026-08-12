@@ -145,6 +145,7 @@ export function DiffCanvas({
                   row={row}
                   files={files}
                   tokens={tokens}
+                  viewMode={viewMode}
                   onToggleCollapse={onToggleCollapse}
                   onExpandLarge={onExpandLarge}
                   onExpandContext={onExpandContext}
@@ -175,6 +176,7 @@ function RowContent({
   row,
   files,
   tokens,
+  viewMode,
   collapsed,
   onToggleCollapse,
   onExpandLarge,
@@ -184,6 +186,7 @@ function RowContent({
   readonly row: DiffRow;
   readonly files: readonly FileChange[];
   readonly tokens: ReadonlyMap<string, PatchTokens>;
+  readonly viewMode: ViewMode;
   readonly collapsed: ReadonlySet<string>;
   readonly onToggleCollapse: (path: string) => void;
   readonly onExpandLarge: (path: string) => void;
@@ -212,7 +215,7 @@ function RowContent({
         />
       );
     case 'hunk':
-      return <HunkRow hunk={row.hunk} />;
+      return <HunkRow hunk={row.hunk} viewMode={viewMode} />;
     case 'expander':
       return <ExpanderRow row={row} onExpand={(from, to) => onExpandContext(file.path, from, to)} />;
     case 'line':

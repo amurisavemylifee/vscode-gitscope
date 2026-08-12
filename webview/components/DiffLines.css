@@ -66,16 +66,31 @@
   background: color-mix(in srgb, var(--gs-fg-muted) 8%, transparent);
   color: var(--gs-fg-muted);
   font-family: var(--gs-font-code);
-  font-size: 11px;
+  /* Кегль как у кода: ширина полосы ниже задана в ch, и считаться ch должен по
+     тому же шрифту, что и колонки строк. Сам текст мельче — на вложенных span. */
+  font-size: var(--gs-font-size-code);
+}
+
+/* Полоса шириной со всю строку, а не с окно: иначе при горизонтальной прокрутке
+   заголовок хунка уезжает за левый край и на его месте остаётся пустота.
+   Слагаемые — номера и маркеры из сеток .gs-diff__row и .gs-split__row. */
+.gs-diff__hunk-header--unified {
+  min-width: calc(110px + var(--gs-split-code, 80ch));
+}
+
+.gs-diff__hunk-header--split {
+  min-width: calc(128px + 2 * var(--gs-split-code, 80ch));
 }
 
 .gs-diff__hunk-range {
   flex: none;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
 .gs-diff__hunk-context {
   overflow: hidden;
+  font-size: 11px;
   opacity: 0.85;
   text-overflow: ellipsis;
   white-space: nowrap;

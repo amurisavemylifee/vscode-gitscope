@@ -82,19 +82,28 @@ describe('SplitLineRow', () => {
 });
 
 describe('HunkRow', () => {
+  const hunk: Hunk = {
+    baseStart: 10,
+    baseCount: 4,
+    compareStart: 12,
+    compareCount: 5,
+    header: 'export function run() {',
+    lines: [],
+  };
+
   it('показывает диапазон и имя функции из заголовка хунка', () => {
-    const hunk: Hunk = {
-      baseStart: 10,
-      baseCount: 4,
-      compareStart: 12,
-      compareCount: 5,
-      header: 'export function run() {',
-      lines: [],
-    };
-    render(<HunkRow hunk={hunk} />);
+    render(<HunkRow hunk={hunk} viewMode="unified" />);
 
     expect(screen.getByText('@@ -10,4 +12,5 @@')).toBeInTheDocument();
     expect(screen.getByText('export function run() {')).toBeInTheDocument();
+  });
+
+  // Ширина полосы зависит от режима: она должна тянуться на всю строку, иначе при
+  // горизонтальной прокрутке заголовок уезжает за край окна.
+  it('помечает режим отображения — по нему считается ширина полосы', () => {
+    const { container } = render(<HunkRow hunk={hunk} viewMode="split" />);
+
+    expect(container.querySelector('.gs-diff__hunk-header--split')).toBeInTheDocument();
   });
 });
 

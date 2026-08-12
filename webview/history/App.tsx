@@ -226,6 +226,7 @@ export function App() {
             rows={rows}
             lineHeight={lineHeight}
             maxLineLength={maxLineLength}
+            viewMode={viewMode ?? settings.viewMode}
             resetKey={`${selectedId ?? ''}:${versionMode}`}
           />
         </section>

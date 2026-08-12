@@ -1,5 +1,5 @@
 import type { SplitCell } from '@shared/diff/splitRows';
-import type { DiffLine, Hunk } from '@shared/model';
+import type { DiffLine, Hunk, ViewMode } from '@shared/model';
 import { plural } from '@shared/time';
 import type { DiffRow } from '../diff/rows';
 import type { LineTokens } from '../syntax/highlighter';
@@ -20,9 +20,12 @@ const EXPAND_AT_ONCE = 24;
 /** Длиннее — кнопки «открыть всё» уже нет: это заметная пауза и много памяти. */
 const EXPAND_ALL_LIMIT = 1000;
 
-export function HunkRow({ hunk }: { readonly hunk: Hunk }) {
+// Полоса заголовка тянется на всю ширину строк, а она зависит от режима: в двух
+// колонках это две половины, в одной — одна. Ширина задана в CSS, отсюда только
+// режим.
+export function HunkRow({ hunk, viewMode }: { readonly hunk: Hunk; readonly viewMode: ViewMode }) {
   return (
-    <div className="gs-diff__hunk-header">
+    <div className={`gs-diff__hunk-header gs-diff__hunk-header--${viewMode}`}>
       <span className="gs-diff__hunk-range">
         @@ -{hunk.baseStart},{hunk.baseCount} +{hunk.compareStart},{hunk.compareCount} @@
       </span>
