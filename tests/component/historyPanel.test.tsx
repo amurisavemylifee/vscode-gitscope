@@ -55,8 +55,12 @@ const state = (overrides: Partial<HistoryPanelState> = {}): HistoryPanelState =>
 });
 
 /** Ответы на разные методы канала: панель зовёт несколько за время рендера. */
-const respondWith = (panelState: HistoryPanelState) => {
-  request.mockImplementation((method: string) => {
+const respondWith = (panelState: HistoryPanelState, patchOverride: Record<string, unknown> = {}) => {
+  request.mockImplementation((method: string, params: Record<string, number> = {}) => {
+    if (method === 'history/context') {
+      const { startLine = 1, endLine = 0 } = params;
+      return Promise.resolve(Array.from({ length: endLine - startLine + 1 }, (_, at) => `строка ${startLine + at}`));
+    }
     if (method === 'history/ready') {
       return Promise.resolve(panelState);
     }
@@ -92,6 +96,7 @@ const respondWith = (panelState: HistoryPanelState) => {
             lines: [{ kind: 'insert', text: 'export const App = () => null;', compareLine: 1 }],
           },
         ],
+        ...patchOverride,
       });
     }
     return Promise.resolve(null);
@@ -333,6 +338,95 @@ describe('App истории', () => {
     await waitFor(() => expect(request).toHaveBeenCalledWith('history/patch', { entryId: 'a'.repeat(40) }));
     // Режим двух колонок нужен только диффу — в просмотре файла его нет.
     expect(screen.getByRole('group', { name: 'Режим отображения' })).toBeInTheDocument();
+  });
+
+  it('считает изменения версии и переставляет счётчик по Alt+стрелке', async () => {
+    respondWith(state(), {
+      hunks: [
+        {
+          baseStart: 1,
+          baseCount: 2,
+          compareStart: 1,
+          compareCount: 3,
+          header: '',
+          lines: [
+            { kind: 'insert', text: 'первое изменение', compareLine: 1 },
+            { kind: 'context', text: 'общая строка', baseLine: 1, compareLine: 2 },
+            { kind: 'insert', text: 'второе изменение', compareLine: 3 },
+          ],
+        },
+      ],
+    });
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Изменения' }));
+
+    await screen.findByText('1/2');
+
+    await userEvent.keyboard('{Alt>}{ArrowDown}{/Alt}');
+    expect(screen.getByText('2/2')).toBeInTheDocument();
+
+    // По кругу: после последнего изменения снова первое.
+    await userEvent.keyboard('{Alt>}{ArrowDown}{/Alt}');
+    expect(screen.getByText('1/2')).toBeInTheDocument();
+  });
+
+  it('в просмотре файла счётчика изменений нет — считать нечего', async () => {
+    respondWith(state());
+    render(<App />);
+
+    await screen.findByRole('group', { name: 'Что показывать' });
+    expect(screen.queryByRole('group', { name: 'Переход по изменениям' })).not.toBeInTheDocument();
+  });
+
+  it('на каждое изменение ставит засечку на полосе-обзоре', async () => {
+    respondWith(state());
+    const { container } = render(<App />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Изменения' }));
+
+    await waitFor(() => expect(container.querySelectorAll('.gs-ruler__mark')).toHaveLength(1));
+  });
+
+  it('разворачивает файл целиком одной кнопкой и сворачивает обратно', async () => {
+    respondWith(state(), {
+      compareTotalLines: 10,
+      hunks: [
+        {
+          baseStart: 5,
+          baseCount: 1,
+          compareStart: 5,
+          compareCount: 1,
+          header: '',
+          lines: [{ kind: 'insert', text: 'пятая', compareLine: 5 }],
+        },
+      ],
+    });
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Изменения' }));
+
+    const expand = await screen.findByTitle('Показать файл целиком');
+    await userEvent.click(expand);
+
+    expect(request).toHaveBeenCalledWith('history/context', {
+      entryId: 'a'.repeat(40),
+      startLine: 1,
+      endLine: 10,
+    });
+
+    // Строки пришли — разворачивать больше нечего, и кнопка предлагает обратное.
+    const collapse = await screen.findByTitle('Свернуть неизменённые строки');
+    await userEvent.click(collapse);
+    await screen.findByTitle('Показать файл целиком');
+  });
+
+  it('обрезанный патч разворачивать не предлагает', async () => {
+    respondWith(state(), { truncated: true, compareTotalLines: 10 });
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Изменения' }));
+
+    await screen.findByRole('group', { name: 'Режим отображения' });
+    expect(screen.queryByTitle('Показать файл целиком')).not.toBeInTheDocument();
   });
 
   it('кнопка открытия версии просит extension host открыть вкладку', async () => {

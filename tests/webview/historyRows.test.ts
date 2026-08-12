@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileVersion, HistoryEntry } from '@shared/historyModel';
 import type { FilePatch, Hunk } from '@shared/model';
-import { HUNK_ROW_HEIGHT, NOTICE_ROW_HEIGHT } from '../../webview/diff/rows';
+import { EXPANDER_ROW_HEIGHT, HUNK_ROW_HEIGHT, NOTICE_ROW_HEIGHT } from '../../webview/diff/rows';
 import { buildContentRows, buildPatchRows, noticeRows, versionRowHeight } from '../../webview/history/rows';
 
 const version = (overrides: Partial<FileVersion> = {}): FileVersion => ({
@@ -141,6 +141,94 @@ describe('buildPatchRows', () => {
     expect(rows[0]).toMatchObject({ kind: 'notice', tone: 'warning' });
     expect(rows[0]).toHaveProperty('text', expect.stringContaining('2 строки'));
     expect(rows.filter((row) => row.kind === 'line')).toHaveLength(2);
+  });
+});
+
+describe('buildPatchRows: свёрнутые промежутки', () => {
+  /** Хунк на строках 5–6 версии: до него и после остаются свёрнутые куски файла. */
+  const gapped = (overrides: Partial<FilePatch> = {}): FilePatch =>
+    patch({
+      hunks: [
+        {
+          baseStart: 5,
+          baseCount: 1,
+          compareStart: 5,
+          compareCount: 2,
+          header: '',
+          lines: [
+            { kind: 'context', text: 'пятая', baseLine: 5, compareLine: 5 },
+            { kind: 'insert', text: 'шестая', compareLine: 6 },
+          ],
+        },
+      ],
+      compareTotalLines: 10,
+      ...overrides,
+    });
+
+  it('на промежуток перед первым хунком вешает кнопку разворачивания', () => {
+    const rows = buildPatchRows(gapped(), undefined, 'unified', entry());
+
+    expect(rows[0]).toMatchObject({ kind: 'expander', compareStart: 1, compareEnd: 4 });
+  });
+
+  it('хвост файла за последним хунком тоже разворачивается', () => {
+    const rows = buildPatchRows(gapped(), undefined, 'unified', entry());
+
+    // Строки 7–10: номер в предыдущей версии на единицу меньше — хунк добавил строку.
+    expect(rows[rows.length - 1]).toMatchObject({ kind: 'expander', compareStart: 7, compareEnd: 10, baseOffset: -1 });
+  });
+
+  it('без известной длины файла хвоста не выдумывает', () => {
+    const rows = buildPatchRows(gapped({ compareTotalLines: undefined }), undefined, 'unified', entry());
+
+    expect(rows.filter((row) => row.kind === 'expander')).toHaveLength(1);
+  });
+
+  it('обрезанный патч не разворачивают: его хунки не описывают файл целиком', () => {
+    const rows = buildPatchRows(gapped({ truncated: true }), undefined, 'unified', entry());
+
+    expect(rows.some((row) => row.kind === 'expander')).toBe(false);
+  });
+
+  it('подгруженные строки становятся контекстом, а на остаток остаётся кнопка', () => {
+    const context = new Map([
+      [3, { text: 'третья' }],
+      [4, { text: 'четвёртая' }],
+    ]);
+
+    const rows = buildPatchRows(gapped(), undefined, 'unified', entry(), context);
+
+    expect(rows[0]).toMatchObject({ kind: 'expander', compareStart: 1, compareEnd: 2 });
+    expect(rows[1]).toMatchObject({ kind: 'line', line: { kind: 'context', text: 'третья', compareLine: 3, baseLine: 3 } });
+    expect(rows[2]).toMatchObject({ kind: 'line', line: { text: 'четвёртая', compareLine: 4 } });
+  });
+
+  it('развёрнутый целиком промежуток не оставляет кнопок', () => {
+    const context = new Map([1, 2, 3, 4].map((line) => [line, { text: `строка ${line}` }]));
+
+    const rows = buildPatchRows(gapped(), undefined, 'unified', entry(), context);
+
+    expect(rows.slice(0, 4).every((row) => row.kind === 'line')).toBe(true);
+    expect(rows[4]).toMatchObject({ kind: 'hunk' });
+  });
+
+  it('в двух колонках строка промежутка одинакова с обеих сторон', () => {
+    const context = new Map([[4, { text: 'четвёртая', tokens: [{ content: 'четвёртая', color: '#fff', offset: 0 }] }]]);
+
+    const rows = buildPatchRows(gapped(), undefined, 'split', entry(), context);
+    const line = rows.find((row) => row.kind === 'split');
+
+    expect(line).toMatchObject({
+      row: { left: { line: { baseLine: 4 } }, right: { line: { compareLine: 4 } } },
+      leftTokens: context.get(4)?.tokens,
+      rightTokens: context.get(4)?.tokens,
+    });
+  });
+
+  it('у промежутка своя высота строки', () => {
+    const [expander] = buildPatchRows(gapped(), undefined, 'unified', entry());
+
+    expect(versionRowHeight(expander as never, 19)).toBe(EXPANDER_ROW_HEIGHT);
   });
 });
 

@@ -7,17 +7,41 @@ import './VersionHeader.css';
 /** Что показывать справа: файл целиком или только внесённые версией изменения. */
 export type VersionMode = 'content' | 'diff';
 
+/**
+ * Что предлагает кнопка разворачивания: показать скрытые строки, свернуть их
+ * обратно или ничего — когда сворачивать и разворачивать нечего.
+ */
+export type ExpandMode = 'expand' | 'collapse' | 'none';
+
 interface VersionHeaderProps {
   readonly entry: HistoryEntry | null;
   readonly mode: VersionMode;
   readonly viewMode: ViewMode;
+  /** Сколько в версии изменений и на котором из них стоит просмотр. */
+  readonly changeCount: number;
+  readonly changeIndex: number;
+  readonly expandMode: ExpandMode;
   readonly onModeChange: (mode: VersionMode) => void;
   readonly onViewModeChange: (mode: ViewMode) => void;
+  readonly onStepChange: (delta: number) => void;
+  readonly onToggleExpand: () => void;
   readonly onOpen: () => void;
 }
 
 /** Шапка правой области: что именно показано и что с этим можно сделать. */
-export function VersionHeader({ entry, mode, viewMode, onModeChange, onViewModeChange, onOpen }: VersionHeaderProps) {
+export function VersionHeader({
+  entry,
+  mode,
+  viewMode,
+  changeCount,
+  changeIndex,
+  expandMode,
+  onModeChange,
+  onViewModeChange,
+  onStepChange,
+  onToggleExpand,
+  onOpen,
+}: VersionHeaderProps) {
   if (!entry) {
     return null;
   }
@@ -31,6 +55,41 @@ export function VersionHeader({ entry, mode, viewMode, onModeChange, onViewModeC
       </span>
 
       <span className="gs-version-header__spacer" />
+
+      {mode === 'diff' && changeCount > 0 ? (
+        <div className="gs-version-header__nav" role="group" aria-label="Переход по изменениям">
+          <button
+            type="button"
+            className="gs-version-header__action"
+            title="Предыдущее изменение (Alt+↑)"
+            onClick={() => onStepChange(-1)}
+          >
+            <Icon name="chevron-up" size={14} />
+          </button>
+          <span className="gs-version-header__counter" aria-label={`Изменение ${changeIndex + 1} из ${changeCount}`}>
+            {changeIndex + 1}/{changeCount}
+          </span>
+          <button
+            type="button"
+            className="gs-version-header__action"
+            title="Следующее изменение (Alt+↓)"
+            onClick={() => onStepChange(1)}
+          >
+            <Icon name="chevron-down" size={14} />
+          </button>
+        </div>
+      ) : null}
+
+      {mode === 'diff' && expandMode !== 'none' ? (
+        <button
+          type="button"
+          className="gs-version-header__action"
+          title={expandMode === 'expand' ? 'Показать файл целиком' : 'Свернуть неизменённые строки'}
+          onClick={onToggleExpand}
+        >
+          <Icon name={expandMode === 'expand' ? 'unfold' : 'fold'} size={14} />
+        </button>
+      ) : null}
 
       <div className="gs-segmented" role="group" aria-label="Что показывать">
         <SegmentedButton active={mode === 'content'} label="Файл" onClick={() => onModeChange('content')} />

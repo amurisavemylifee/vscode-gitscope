@@ -40,6 +40,11 @@ export type HistoryRequests = {
   'history/version': { params: { readonly entryId: string }; result: FileVersion };
   /** Что эта версия изменила в файле по сравнению с предыдущей. */
   'history/patch': { params: { readonly entryId: string }; result: FilePatch };
+  /** Строки версии для разворачивания свёрнутого контекста, нумерация с 1, включительно. */
+  'history/context': {
+    params: { readonly entryId: string; readonly startLine: number; readonly endLine: number };
+    result: readonly string[];
+  };
   /** Открыть версию отдельной вкладкой редактора, только для чтения. */
   'history/open': { params: { readonly entryId: string }; result: null };
   /** Положить полный SHA коммита в буфер обмена. */

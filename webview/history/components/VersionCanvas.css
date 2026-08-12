@@ -1,7 +1,61 @@
-.gs-version {
+/* Полоса-обзор стоит рядом с областью прокрутки, а не поверх неё: наложение
+   перекрывало бы полосу прокрутки и последний столбец кода. */
+.gs-version-area {
+  display: flex;
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.gs-version {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
   overflow: auto;
+}
+
+/* --- полоса-обзор --- */
+
+.gs-ruler {
+  position: relative;
+  flex: none;
+  width: 12px;
+  border-left: 1px solid var(--gs-border);
+  background: var(--gs-bg-raised);
+  cursor: pointer;
+}
+
+.gs-ruler__mark {
+  position: absolute;
+  right: 2px;
+  left: 2px;
+  min-height: 2px;
+  border-radius: 1px;
+  opacity: 0.55;
+  transition: opacity 80ms ease;
+}
+
+.gs-ruler:hover .gs-ruler__mark {
+  opacity: 0.85;
+}
+
+.gs-ruler__mark--insert {
+  background: var(--gs-added-fg);
+}
+
+.gs-ruler__mark--delete {
+  background: var(--gs-removed-fg);
+}
+
+.gs-ruler__mark--mixed {
+  background: linear-gradient(to right, var(--gs-removed-fg) 50%, var(--gs-added-fg) 50%);
+}
+
+/* Изменение, на котором стоит счётчик в шапке: его видно с любого места полосы. */
+.gs-ruler__mark--current {
+  right: 0;
+  left: 0;
+  opacity: 1;
+  outline: 1px solid var(--gs-focus);
 }
 
 .gs-version__list {

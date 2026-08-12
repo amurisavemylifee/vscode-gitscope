@@ -6,6 +6,7 @@ import { annotateHunkWithWordDiff } from '@shared/diff/wordDiff';
 import type { FileVersion, HistoryEntry } from '@shared/historyModel';
 import { WORKING_ENTRY_ID, type HistoryPage } from '@shared/historyProtocol';
 import type { FilePatch } from '@shared/model';
+import { FileContentCache } from './FileContentCache';
 
 /** Сколько коммитов забирать за один заход. */
 export const HISTORY_PAGE_SIZE = 60;
@@ -43,11 +44,16 @@ export interface HistoryCursor {
  * означало бы вычитать из git тысячу копий файла.
  */
 export class FileHistoryService {
+  /** Содержимое версий: по нему разворачивают свёрнутый контекст между хунками. */
+  private readonly contents: FileContentCache;
+
   constructor(
     private readonly repository: GitRepository,
     /** Путь файла относительно корня репозитория, каким он стал сейчас. */
     private readonly path: string,
-  ) {}
+  ) {
+    this.contents = new FileContentCache(repository);
+  }
 
   /**
    * Страница истории от точки `base`. Без курсора — самая свежая, с курсором —
@@ -219,7 +225,39 @@ export class FileHistoryService {
       // она пересчитывалась бы на каждой перерисовке.
       hunks: diff.hunks.map(annotateHunkWithWordDiff),
       truncated,
+      // По длине файла видно, есть ли что разворачивать после последнего хунка.
+      // У обрезанного патча промежутки не считаются вовсе — его хунки не
+      // описывают файл целиком, — а у двоичного их не бывает.
+      ...(diff.binary || truncated ? {} : { compareTotalLines: (await this.versionLines(entry, signal)).length }),
     };
+  }
+
+  /**
+   * Строки версии — источник для разворачивания свёрнутого контекста.
+   * Нумерация с 1, границы включительно.
+   */
+  async readLines(entry: HistoryEntry, startLine: number, endLine: number, signal?: AbortSignal): Promise<string[]> {
+    const lines = await this.versionLines(entry, signal);
+    return lines.slice(Math.max(0, startLine - 1), Math.max(0, endLine));
+  }
+
+  /**
+   * Файл целиком на этой версии, построчно.
+   *
+   * Коммиты кэшируются: по промежуткам кликают несколько раз подряд, и каждый
+   * клик иначе означал бы новый `git show` того же файла. Рабочая копия читается
+   * с диска каждый раз — она меняется под руками.
+   */
+  private async versionLines(entry: HistoryEntry, signal?: AbortSignal): Promise<readonly string[]> {
+    // Версия, которая файл удалила, содержимого не имеет: разворачивать нечего.
+    if (entry.status === 'deleted') {
+      return [];
+    }
+    if (entry.kind === 'working') {
+      const content = await this.readWorkingCopy();
+      return content.binary ? [] : splitLines(content.text);
+    }
+    return this.contents.lines(entry.sha ?? entry.id, entry.path, signal);
   }
 
   private toEntry(commit: FileLogCommit, path: string): HistoryEntry {

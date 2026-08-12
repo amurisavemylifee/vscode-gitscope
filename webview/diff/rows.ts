@@ -112,7 +112,7 @@ export function rowHeight(row: DiffRow, lineHeight: number): number {
 }
 
 /** Последняя строка хунка на каждой стороне. Пустой хунк «заканчивается» на своей стартовой строке. */
-const endOf = (start: number, count: number) => (count === 0 ? start : start + count - 1);
+export const endOf = (start: number, count: number) => (count === 0 ? start : start + count - 1);
 
 export function buildDiffRows({
   files,

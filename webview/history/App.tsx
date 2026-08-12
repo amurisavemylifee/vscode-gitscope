@@ -7,11 +7,13 @@ import { useResizer } from '../hooks/useResizer';
 import { useSyntaxTheme } from '../hooks/useSyntaxTokens';
 import { actions } from './api/actions';
 import { persistedState } from './api/bridge';
+import { collectChanges, wrapChangeIndex } from './changes';
 import { EntryList } from './components/EntryList';
 import { HistoryHeader } from './components/HistoryHeader';
-import { VersionCanvas } from './components/VersionCanvas';
-import { VersionHeader, type VersionMode } from './components/VersionHeader';
+import { VersionCanvas, type ScrollTarget } from './components/VersionCanvas';
+import { VersionHeader, type ExpandMode, type VersionMode } from './components/VersionHeader';
 import { useHistoryState } from './hooks/useHistoryState';
+import { useVersionContext } from './hooks/useVersionContext';
 import { useContentTokens, usePatchTokens } from './hooks/useVersionTokens';
 import { useVersions } from './hooks/useVersions';
 import { buildContentRows, buildPatchRows, noticeRows } from './rows';
@@ -43,6 +45,7 @@ export function App() {
 
   const theme = useSyntaxTheme();
   const lineHeight = useCodeLineHeight(theme);
+  const { context, expand, collapse } = useVersionContext(historyKey, theme);
 
   // Список пришёл заново: держимся за прежний выбор, если он в нём остался, —
   // иначе перечитанная история сбрасывала бы просмотр на первую версию.
@@ -75,6 +78,7 @@ export function App() {
 
   const contentTokens = useContentTokens(version, theme);
   const patchTokens = usePatchTokens(patch, theme);
+  const entryContext = selectedId === null ? undefined : context.get(selectedId);
 
   const rows = useMemo(() => {
     if (!selected) {
@@ -90,7 +94,7 @@ export function App() {
     if (versionMode === 'content') {
       return version ? buildContentRows(version, contentTokens) : [];
     }
-    return patch ? buildPatchRows(patch, patchTokens, viewMode ?? settings.viewMode, selected) : [];
+    return patch ? buildPatchRows(patch, patchTokens, viewMode ?? settings.viewMode, selected, entryContext) : [];
   }, [
     selected,
     versionMode,
@@ -100,11 +104,79 @@ export function App() {
     patch,
     contentTokens,
     patchTokens,
+    entryContext,
     viewMode,
     settings.viewMode,
   ]);
 
   const maxLineLength = useMemo(() => longestLine(patch?.hunks), [patch]);
+  const changes = useMemo(() => collectChanges(rows, lineHeight), [rows, lineHeight]);
+
+  const [changeIndex, setChangeIndex] = useState(0);
+  const [scrollTarget, setScrollTarget] = useState<ScrollTarget | null>(null);
+
+  // Другая версия или другой режим — счёт изменений начинается заново.
+  useEffect(() => {
+    setChangeIndex(0);
+    setScrollTarget(null);
+  }, [selectedId, versionMode]);
+
+  const stepChange = useCallback(
+    (delta: number) => {
+      const next = wrapChangeIndex(changeIndex + delta, changes.blocks.length);
+      const block = changes.blocks[next];
+      if (block === undefined) {
+        return;
+      }
+      setChangeIndex(next);
+      setScrollTarget((previous) => ({ row: block.row, nonce: (previous?.nonce ?? 0) + 1 }));
+    },
+    [changes, changeIndex],
+  );
+
+  // Alt+стрелки, а не голые стрелки: те листают версии в списке слева.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+        return;
+      }
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {
+        return;
+      }
+      event.preventDefault();
+      stepChange(event.key === 'ArrowDown' ? 1 : -1);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [stepChange]);
+
+  const expandRange = useCallback(
+    (startLine: number, endLine: number) => {
+      if (selected) {
+        expand(selected.id, selected.path, startLine, endLine);
+      }
+    },
+    [expand, selected],
+  );
+
+  // Пока есть свёрнутые промежутки, кнопка предлагает показать файл целиком;
+  // когда скрывать больше нечего — свернуть всё обратно.
+  const hasGaps = useMemo(() => rows.some((row) => row.kind === 'expander'), [rows]);
+  const expandMode: ExpandMode = hasGaps ? 'expand' : (entryContext?.size ?? 0) > 0 ? 'collapse' : 'none';
+
+  const toggleExpand = useCallback(() => {
+    if (!selected) {
+      return;
+    }
+    if (expandMode === 'collapse') {
+      collapse(selected.id);
+      return;
+    }
+    if (patch?.compareTotalLines !== undefined) {
+      expand(selected.id, selected.path, 1, patch.compareTotalLines);
+    }
+  }, [selected, expandMode, patch, expand, collapse]);
 
   const changeVersionMode = useCallback((mode: VersionMode) => {
     setVersionMode(mode);
@@ -218,8 +290,13 @@ export function App() {
             entry={selected}
             mode={versionMode}
             viewMode={viewMode ?? settings.viewMode}
+            changeCount={changes.blocks.length}
+            changeIndex={changeIndex}
+            expandMode={expandMode}
             onModeChange={changeVersionMode}
             onViewModeChange={changeViewMode}
+            onStepChange={stepChange}
+            onToggleExpand={toggleExpand}
             onOpen={() => selected && openEntry(selected)}
           />
           <VersionCanvas
@@ -228,6 +305,11 @@ export function App() {
             maxLineLength={maxLineLength}
             viewMode={viewMode ?? settings.viewMode}
             resetKey={`${selectedId ?? ''}:${versionMode}`}
+            changes={changes}
+            currentChange={changeIndex}
+            scrollTo={scrollTarget}
+            onCurrentChange={setChangeIndex}
+            onExpand={expandRange}
           />
         </section>
       </div>

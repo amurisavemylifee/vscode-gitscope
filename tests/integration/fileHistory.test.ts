@@ -183,6 +183,39 @@ describe('FileHistoryService', () => {
       expect(patch.hunks).toEqual([]);
       expect(patch.status).toBe('renamed');
     });
+
+    it('сообщает длину файла — по ней видно, есть ли что разворачивать за хунками', async () => {
+      const { entries } = await service.page('HEAD', undefined);
+
+      const patch = await service.patch(entries[0] as HistoryEntry, 3);
+
+      expect(patch.compareTotalLines).toBe(3);
+    });
+  });
+
+  describe('readLines', () => {
+    it('отдаёт строки версии по границам включительно, нумерация с единицы', async () => {
+      const { entries } = await service.page('HEAD', undefined);
+
+      const lines = await service.readLines(entries[0] as HistoryEntry, 1, 2);
+
+      expect(lines).toEqual(['первая', 'вторая правка']);
+    });
+
+    it('читает файл под тем именем, которое у него было на этой версии', async () => {
+      const { entries } = await service.page('HEAD', undefined);
+
+      const lines = await service.readLines(entry(entries, 'правка') as HistoryEntry, 3, 3);
+
+      // На этой версии файл ещё звался notes/draft.md — по нынешнему имени его там нет.
+      expect(lines).toEqual(['третья']);
+    });
+
+    it('за концом файла отдаёт то, что есть, а не падает', async () => {
+      const { entries } = await service.page('HEAD', undefined);
+
+      await expect(service.readLines(entries[0] as HistoryEntry, 3, 99)).resolves.toEqual(['третья']);
+    });
   });
 
   describe('рабочая копия', () => {

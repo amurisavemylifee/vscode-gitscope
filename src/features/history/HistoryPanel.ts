@@ -152,6 +152,9 @@ export class HistoryPanel implements vscode.Disposable {
       'history/patch': ({ entryId }, signal) =>
         this.requireContext().service.patch(this.requireEntry(entryId), this.settings.contextLines, signal),
 
+      'history/context': ({ entryId, startLine, endLine }, signal) =>
+        this.requireContext().service.readLines(this.requireEntry(entryId), startLine, endLine, signal),
+
       'history/open': async ({ entryId }) => {
         const context = this.requireContext();
         const entry = this.requireEntry(entryId);

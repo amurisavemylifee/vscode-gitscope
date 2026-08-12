@@ -111,7 +111,8 @@ export function ExpanderRow({
   row,
   onExpand,
 }: {
-  readonly row: Extract<DiffRow, { kind: 'expander' }>;
+  /** Достаточно границ промежутка — их несут строки обеих панелей. */
+  readonly row: { readonly compareStart: number; readonly compareEnd: number };
   readonly onExpand: (from: number, to: number) => void;
 }) {
   const count = row.compareEnd - row.compareStart + 1;
