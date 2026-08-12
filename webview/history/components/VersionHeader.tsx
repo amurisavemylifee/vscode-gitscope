@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { HistoryEntry } from '@shared/historyModel';
 import type { ViewMode } from '@shared/model';
-import { formatDateTime } from '@shared/time';
 import { Icon, type IconName } from '../../components/Icon';
 import { StatusBadge } from '../../components/StatusBadge';
 import './VersionHeader.css';
@@ -44,20 +43,6 @@ export function VersionHeader({
 
       <span className="gs-version-header__path" title={entry.path}>
         {entry.path}
-      </span>
-
-      <span className="gs-version-header__meta">
-        {working ? (
-          'рабочая копия на диске'
-        ) : (
-          <>
-            <span className="gs-version-header__sha">{entry.shortSha}</span>
-            <span className="gs-version-header__separator">·</span>
-            {entry.authorName}
-            <span className="gs-version-header__separator">·</span>
-            {formatDateTime(entry.authoredAt ?? '')}
-          </>
-        )}
       </span>
 
       <span className="gs-version-header__spacer" />

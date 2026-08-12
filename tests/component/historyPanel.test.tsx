@@ -333,7 +333,8 @@ describe('App истории', () => {
     );
     render(<App />);
 
-    await screen.findByText('рабочая копия на диске');
+    // Шапка версии уже отрисована — значит, кнопки копирования нет, а не «ещё нет».
+    await screen.findByTitle('Открыть эту версию отдельной вкладкой (Enter)');
     expect(screen.queryByTitle('Скопировать SHA коммита')).not.toBeInTheDocument();
   });
 });
