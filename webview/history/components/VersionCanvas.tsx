@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { CodeText } from '../../components/CodeText';
 import { Icon } from '../../components/Icon';
@@ -16,8 +16,8 @@ export interface ScrollTarget {
 }
 
 interface VersionCanvasProps {
-  /** Заводится в панели: ширину переноса по нему считает и полоса-обзор. */
-  readonly scrollRef: RefObject<HTMLDivElement | null>;
+  /** Область прокрутки отдаётся панели: ширину переноса по ней считает и полоса-обзор. */
+  readonly onScrollElement: (element: HTMLDivElement | null) => void;
   readonly rows: readonly VersionRow[];
   readonly lineHeight: number;
   /** Сколько символов кода помещается в строку — по нему считаются высоты. */
@@ -38,7 +38,7 @@ interface VersionCanvasProps {
  * десятки тысяч строк иначе кладёт webview ещё до того, как что-то покажет.
  */
 export function VersionCanvas({
-  scrollRef,
+  onScrollElement,
   rows,
   lineHeight,
   columns,
@@ -49,9 +49,18 @@ export function VersionCanvas({
   onCurrentChange,
   onExpand,
 }: VersionCanvasProps) {
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
+  const attach = useCallback(
+    (element: HTMLDivElement | null) => {
+      setScrollElement(element);
+      onScrollElement(element);
+    },
+    [onScrollElement],
+  );
+
   const virtualizer = useVirtualizer({
     count: rows.length,
-    getScrollElement: () => scrollRef.current,
+    getScrollElement: () => scrollElement,
     estimateSize: (index) => {
       const row = rows[index];
       return row ? versionRowHeight(row, lineHeight, columns) : lineHeight;
@@ -85,12 +94,12 @@ export function VersionCanvas({
   const scrollOffset = virtualizer.scrollOffset ?? 0;
   useEffect(() => {
     if (changes.blocks.length > 0) {
-      onCurrentChange(changeAtOffset(changes, scrollOffset, scrollRef.current?.clientHeight ?? 0));
+      onCurrentChange(changeAtOffset(changes, scrollOffset, scrollElement?.clientHeight ?? 0));
     }
   }, [changes, scrollOffset, onCurrentChange]);
 
   const seek = (offset: number) => {
-    const viewport = scrollRef.current?.clientHeight ?? 0;
+    const viewport = scrollElement?.clientHeight ?? 0;
     virtualizer.scrollToOffset(Math.max(0, offset - viewport / 2));
   };
 
@@ -98,7 +107,7 @@ export function VersionCanvas({
     <div className="gs-version-area">
       <div
         className="gs-version"
-        ref={scrollRef}
+        ref={attach}
         // Сколько символов помещается в строку: по этому же числу посчитаны
         // высоты строк, поэтому вёрстка и расчёт переносят в одних местах.
         style={{ '--gs-wrap-columns': columns } as React.CSSProperties}

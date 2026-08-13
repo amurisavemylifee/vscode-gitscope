@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { FileChange, ViewMode } from '@shared/model';
 import { buildDiffRows, rowAtOffset, rowHeight, type ContextStore, type DiffRow } from '../diff/rows';
@@ -65,9 +65,9 @@ export function DiffCanvas({
   onRequestPatch,
   onVisibleFileChange,
 }: DiffCanvasProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
   const columns = useWrapColumns(
-    scrollRef,
+    scrollElement,
     viewMode === 'split' ? { gutter: GUTTER_SPLIT, halves: 2 } : { gutter: GUTTER_UNIFIED, halves: 1 },
     theme,
   );
@@ -79,7 +79,7 @@ export function DiffCanvas({
 
   const virtualizer = useVirtualizer({
     count: rows.length,
-    getScrollElement: () => scrollRef.current,
+    getScrollElement: () => scrollElement,
     estimateSize: (index) => {
       const row = rows[index];
       return row ? rowHeight(row, lineHeight, columns) : lineHeight;
@@ -135,7 +135,7 @@ export function DiffCanvas({
     <div className="gs-canvas-wrapper">
       <div
         className="gs-canvas"
-        ref={scrollRef}
+        ref={setScrollElement}
         // Сколько символов помещается в строку: по этому же числу посчитаны
         // высоты строк, поэтому вёрстка и расчёт переносят в одних местах.
         style={{ '--gs-wrap-columns': columns } as React.CSSProperties}

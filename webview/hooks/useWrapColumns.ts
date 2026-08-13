@@ -1,4 +1,4 @@
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useState } from 'react';
 import { CELL_EPSILON, CODE_PADDING } from '../diff/wrap';
 
 /** Уже — не бывает: на совсем узкой панели код лучше обрезать прокруткой, чем ронять в столбик. */
@@ -23,14 +23,18 @@ interface WrapMetrics {
  * текст. Поэтому неточность в жёлобе или отступе ничего не ломает: она лишь
  * оставит у правого края немного воздуха.
  *
+ * Меряем по самому элементу, а не по ссылке на него: область прокрутки
+ * появляется не сразу — пока панель ждёт ответа хоста, её вовсе нет в разметке.
+ * Со ссылкой замер случался бы один раз, на пустом месте, и ширина оставалась бы
+ * наименьшей до первой смены раскладки.
+ *
  * `theme` в зависимостях не случаен: вместе с темой VS Code меняет размер
  * шрифта редактора, а с ним и ширину символа.
  */
-export function useWrapColumns(ref: RefObject<HTMLElement | null>, { gutter, halves }: WrapMetrics, theme: string) {
+export function useWrapColumns(element: HTMLElement | null, { gutter, halves }: WrapMetrics, theme: string) {
   const [columns, setColumns] = useState(MIN_COLUMNS);
 
   useEffect(() => {
-    const element = ref.current;
     if (element === null) {
       return;
     }
@@ -46,7 +50,7 @@ export function useWrapColumns(ref: RefObject<HTMLElement | null>, { gutter, hal
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [ref, gutter, halves, theme]);
+  }, [element, gutter, halves, theme]);
 
   return columns;
 }

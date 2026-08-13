@@ -61,10 +61,10 @@ export function App() {
   const { context, expand, collapse } = useVersionContext(historyKey, theme);
 
   // Ширина переноса нужна не только канве, но и полосе-обзору: она считает
-  // изменения в пикселях, а высота строки теперь зависит от переноса. Поэтому
-  // область прокрутки заводится здесь и передаётся канве.
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const columns = useWrapColumns(canvasRef, wrapMetrics(versionMode, effectiveViewMode), theme);
+  // изменения в пикселях, а высота строки зависит от переноса. Поэтому канва
+  // отдаёт сюда свою область прокрутки, как только та появится в разметке.
+  const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null);
+  const columns = useWrapColumns(canvasElement, wrapMetrics(versionMode, effectiveViewMode), theme);
 
   // Список пришёл заново: держимся за прежний выбор, если он в нём остался, —
   // иначе перечитанная история сбрасывала бы просмотр на первую версию.
@@ -326,7 +326,7 @@ export function App() {
             onOpen={() => selected && openEntry(selected)}
           />
           <VersionCanvas
-            scrollRef={canvasRef}
+            onScrollElement={setCanvasElement}
             rows={rows}
             lineHeight={lineHeight}
             columns={columns}
