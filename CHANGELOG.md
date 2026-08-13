@@ -2,6 +2,10 @@
 
 ## English
 
+### 0.1.1
+
+- Fixed: in file history the code wrapped at the narrowest width until the view mode was toggled — the wrap width was measured before the scroll area appeared in the markup
+
 ### 0.1.0
 
 - Initial release
@@ -13,6 +17,10 @@
 - Extension name, command titles and setting descriptions are localized to English and Russian
 
 ## Русский
+
+### 0.1.1
+
+- Исправлено: в истории файла код переносился по наименьшей ширине, пока не переключишь режим — ширина переноса мерилась раньше, чем в разметке появлялась область прокрутки
 
 ### 0.1.0
 
