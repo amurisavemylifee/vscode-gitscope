@@ -1,4 +1,4 @@
 {
-  "extension.displayName": "Revisor — обзор изменений git",
+  "extension.displayName": "GitScope — сравнение и история файла",
   "extension.description": "Сравнение любых двух ревизий git — как «Files changed» в pull request — и полная история файла: дерево файлов, две колонки, словный diff и подсветка синтаксиса."
 }
