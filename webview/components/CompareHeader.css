@@ -153,8 +153,14 @@
   cursor: default;
 }
 
+/* Имя репозитория — такой же плашкой, как в истории файла (.gs-history-header__repository). */
 .gs-header__repo {
+  flex: none;
   overflow: hidden;
+  padding: 1px 6px;
+  border-radius: var(--gs-radius-sm);
+  background: color-mix(in srgb, var(--gs-fg-muted) 14%, transparent);
+  color: var(--gs-fg-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
