@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import * as vscode from 'vscode';
 
-const EXTENSION_ID = 'amurisavemylifee.git-scope';
+const EXTENSION_ID = 'amurisavemylifee.vscode-gitscope';
 
 /** Ждёт, пока условие станет истинным: панель появляется не мгновенно. */
 async function waitFor(check: () => boolean, message: string, timeoutMs = 15_000): Promise<void> {
