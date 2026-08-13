@@ -4,8 +4,16 @@
   "description": "%extension.description%",
   "version": "0.1.0",
   "publisher": "amurisavemylifee",
+  "author": "Taras Shashurin",
   "license": "MIT",
-  "private": true,
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/amurisavemylifee/vscode-gitscope"
+  },
+  "bugs": {
+    "url": "https://github.com/amurisavemylifee/vscode-gitscope/issues"
+  },
   "engines": {
     "vscode": "^1.95.0",
     "node": ">=20"
@@ -19,7 +27,9 @@
     "diff",
     "compare",
     "branch",
-    "review"
+    "review",
+    "history",
+    "revisions"
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
@@ -30,13 +40,13 @@
     "commands": [
       {
         "command": "gitscope.compareRevisions",
-        "title": "Сравнить ревизии…",
+        "title": "%command.compareRevisions.title%",
         "category": "GitScope",
         "icon": "$(git-compare)"
       },
       {
         "command": "gitscope.fileHistory",
-        "title": "История файла…",
+        "title": "%command.fileHistory.title%",
         "category": "GitScope",
         "icon": "$(history)"
       }
@@ -71,13 +81,13 @@
           "default": 3,
           "minimum": 0,
           "maximum": 50,
-          "description": "Сколько строк контекста показывать вокруг изменений."
+          "description": "%configuration.contextLines.description%"
         },
         "gitscope.diff.collapseFilesOverLines": {
           "type": "number",
           "default": 1500,
           "minimum": 0,
-          "description": "Файлы с диффом длиннее указанного числа строк по умолчанию свёрнуты. 0 — не сворачивать."
+          "description": "%configuration.collapseFilesOverLines.description%"
         },
         "gitscope.diff.defaultViewMode": {
           "type": "string",
@@ -87,15 +97,16 @@
           ],
           "default": "unified",
           "enumDescriptions": [
-            "Одна колонка, добавленные и удалённые строки подряд",
-            "Две колонки: слева базовая ревизия, справа сравниваемая"
+            "%configuration.defaultViewMode.unified%",
+            "%configuration.defaultViewMode.split%"
           ],
-          "description": "Режим отображения диффа при открытии панели."
+          "description": "%configuration.defaultViewMode.description%"
         }
       }
     }
   },
   "scripts": {
+    "vscode:prepublish": "pnpm run build",
     "build": "pnpm run build:ext && pnpm run build:webview",
     "build:ext": "node esbuild.config.mjs --production",
     "build:webview": "vite build",
@@ -108,7 +119,8 @@
     "test:integration": "vitest run tests/integration",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "pnpm run build && pnpm run build:e2e && node scripts/prepareE2eWorkspace.mjs && vscode-test",
-    "package": "pnpm run build && vsce package --no-dependencies",
+    "package": "vsce package --no-dependencies",
+    "publish": "vsce publish --no-dependencies",
     "build:e2e": "node esbuild.config.mjs --e2e"
   },
   "dependencies": {

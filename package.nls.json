@@ -1,4 +1,11 @@
 {
   "extension.displayName": "GitScope — Diff & File History",
-  "extension.description": "Compare any two git revisions like a pull request's Files changed, plus the full history of a single file: file tree, split view, word diff and syntax highlighting."
+  "extension.description": "Compare any two git revisions like a pull request's Files changed, plus the full history of a single file: file tree, split view, word diff and syntax highlighting.",
+  "command.compareRevisions.title": "Compare Revisions…",
+  "command.fileHistory.title": "File History…",
+  "configuration.contextLines.description": "How many context lines to show around changes.",
+  "configuration.collapseFilesOverLines.description": "Files whose diff is longer than this many lines start collapsed. 0 — never collapse.",
+  "configuration.defaultViewMode.description": "Diff layout a panel opens with.",
+  "configuration.defaultViewMode.unified": "One column, added and removed lines in sequence",
+  "configuration.defaultViewMode.split": "Two columns: base revision on the left, compared revision on the right"
 }

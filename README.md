@@ -1,4 +1,165 @@
-# Revisor
+# GitScope
+
+[English](#english) | [Русский](#русский)
+
+---
+
+## English
+
+VS Code extension for reading git changes. Two features:
+
+- **compare the state of the code** at any two points of history — like the “Files changed”
+  tab of a pull request;
+- **file history** — every version of the open file on the left, the selected one on the right.
+
+> The panel interface is currently in Russian; command titles, setting descriptions and the
+> marketplace listing follow the VS Code display language.
+
+### Compare revisions
+
+#### What exactly is shown
+
+The comparison runs as `git diff <base> <compare>` — two-dot, tree against tree. That differs
+from what GitHub shows in a PR (three-dot, from the point where the branches diverged):
+GitScope honestly shows **all** the difference between two snapshots of the code. If something
+landed in the base branch after the fork and is absent in the compared one, the file shows up
+as deleted — because in that state of the code it really is gone.
+
+#### How to use
+
+Command palette → **GitScope: Compare Revisions…**
+
+Then two pickers: the base revision and the compared one. Each accepts a branch (including
+remote ones), a tag, a commit from the log, or anything `git rev-parse` understands — a raw
+SHA, `HEAD~3`, `origin/main@{yesterday}`. The same pickers live in the panel header, so the
+points of comparison can be changed without closing it.
+
+The command also takes arguments — from a keybinding, a task or another extension:
+
+```jsonc
+{ "command": "gitscope.compareRevisions", "args": { "base": "origin/main", "compare": "HEAD" } }
+```
+
+#### In the panel
+
+- on the left, a tree of changed files with statuses and line counters; a click scrolls to the file;
+- on the right, every diff in one continuous scroll, with syntax highlighting;
+- unified and split layouts, switched in the header;
+- changed fragments are highlighted inside the line, not the whole line;
+- long lines wrap and take several rows, keeping the number on the first one;
+- collapsed lines between changes expand on a button;
+- files fold one by one or all at once, from the header;
+- the header shows when refs were last fetched and offers a fetch button: comparing against
+  `origin/*` lies if the last fetch was a week ago.
+
+### File history
+
+Right click in the editor or in the explorer → **GitScope: File History…**, or the command
+palette for the open file.
+
+On the left, version cards from newest to oldest: commit subject, author, relative and exact
+date, short SHA, branches and tags on that commit, counters of changed lines. If the file on
+disk differs from HEAD, the first card is the **working copy**. The list walks with arrows,
+Home/End and PageUp/PageDown.
+
+On the right, the selected version. A switch in the header decides what to show:
+
+- **File** — the whole content, with syntax highlighting and line numbers;
+- **Changes** — what exactly this commit did to the file, in one or two columns.
+
+Next to it: copying the SHA and opening the version as a separate editor tab (Enter). The tab
+is read-only and is named `App@a1b2c3d.tsx` — history cannot be edited through it.
+
+The header carries the same revision picker as the compare panel. It defaults to the current
+branch, but any other branch, tag, commit or expression like `HEAD~10` works too: then the
+history is shown **from the point of view** of that revision — only the commits reachable from
+it. There is no working copy card in that case: the state of the disk does not belong to the
+history seen from an older point.
+
+History follows renames and moves across folders: on the commit where the file changed its
+name it does not break off, and the card shows the previous path. A “deleted, then restored”
+pair does not tear the history apart either. Merges are shown alongside ordinary commits: an
+edit that arrived in a branch as conflict resolution lives exactly in the merge commit.
+Versions load page by page as the list scrolls.
+
+### Settings
+
+| Setting | Default | What it does |
+|---|---|---|
+| `gitscope.diff.contextLines` | 3 | How many context lines around changes (in both panels) |
+| `gitscope.diff.collapseFilesOverLines` | 1500 | Threshold after which a file starts collapsed. 0 — never collapse |
+| `gitscope.diff.defaultViewMode` | `unified` | Layout a panel opens with (in both panels) |
+
+### Not there yet
+
+In revision comparison — the working tree, the index and stashes (commits, branches and tags
+only). Everywhere: “viewed” marks, comments, stepping inside submodules, viewing images
+(binary files are shown as sizes), a visual commit graph, search across a file's history, and
+comparing two arbitrary versions of a file with each other.
+
+### Development
+
+```bash
+pnpm install
+pnpm build          # one-off build of the extension host + webview
+pnpm typecheck      # tsc over both projects
+pnpm lint
+pnpm test           # logic (Node) + components (jsdom)
+pnpm test:coverage  # 80% threshold for lines, branches, functions and statements
+pnpm test:e2e       # in a real VS Code; on a headless machine under `xvfb-run -a`
+pnpm package        # .vsix
+```
+
+Debugging: open the folder in VS Code and press **F5** — an Extension Development Host starts
+and both builds go into watch mode.
+
+### How it is built
+
+The layers are arranged so that future git features reuse the bottom two:
+
+| Layer | Depends on | Purpose |
+|---|---|---|
+| `src/shared/` | nothing | Data model, webview ⇄ host protocol, typed RPC, pure diff algorithms. Isomorphic: runs both in Node and in the browser |
+| `src/core/` | Node | Running `git` and parsing its output. Knows nothing about `vscode`, tested with plain Vitest |
+| `src/services/` | `core` + `vscode` | Workspace repositories, revisions, comparisons, settings |
+| `src/features/` | everything above | Commands, pickers, webview panels |
+| `webview/` | `src/shared/` | React apps of the panels: `webview/` — comparison, `webview/history/` — file history |
+
+A few decisions worth knowing up front:
+
+- **git runs as a process**, not through the built-in extension's API: that one has no diff for
+  an arbitrary pair of revisions. `vscode.git` is used only to find repositories and the path to
+  the binary.
+- **Loading is two-phase**: the list of files is computed at once, patches are pulled one by one
+  as a file approaches the screen.
+- **Rows are virtualized** — both in comparison and in history there can be tens of thousands.
+- **Wrapping is computed, not measured**: the virtualizer needs row heights before rendering, so
+  the number of visual rows is derived from the column count the canvas hands to CSS. That only
+  works because the wrap is hard (`word-break: break-all`).
+- **Renames are tracked by our own code, not `git log --follow`.** The flag does exactly one of
+  two things: either it follows the history through renames, or it shows merges — merge commits
+  it drops silently. Instead the page is collected in chunks: when a chunk breaks off at the
+  commit where the file “appeared”, that commit is re-read in full (`git diff` without a path
+  filter), and if it turns out to be a rename, the walk continues under the previous name. With
+  a path filter git does not show such a pair — a rename looks like an addition.
+- **History pages by cursor**, not by `--skip`: `--skip` skips commits without parsing them, and
+  a file moving across the skip boundary would be lost. The next page is taken from the parent of
+  the last shown commit.
+- **The file name is resolved at the chosen revision, in both directions.** The panel is opened on
+  a working copy file, while history can be read from any point where the file might have had a
+  different name. If the revision is newer than the rename, the name is followed forward — to
+  whatever the file moved into; if older, backward — to what it was called back then; and if two
+  branches renamed the file differently, both directions add up: back to the common name and
+  forward from it along the chosen branch. Without this the history would either break off at the
+  rename or not be found at all.
+- **Webview styles are bundled into one file** (`cssCodeSplit: false`): when split by entry, shared
+  rules move into a chunk there is no way to reference — the panel HTML is assembled by hand.
+- **Highlighting is Shiki on the JavaScript engine**, without WebAssembly: WASM would require
+  weakening the panel's CSP.
+
+---
+
+## Русский
 
 Расширение VS Code для обзора изменений в git. Две функции:
 
@@ -6,9 +167,9 @@
   «Files changed» у pull request;
 - **история файла** — все версии открытого файла слева, выбранная версия справа.
 
-## Сравнение ревизий
+### Сравнение ревизий
 
-### Что именно показывается
+#### Что именно показывается
 
 Сравнение выполняется как `git diff <base> <compare>` — двухточечное, дерево против
 дерева. Это отличается от того, что GitHub показывает в PR (там трёхточечное, от точки
@@ -17,7 +178,7 @@
 файл будет показан как удалённый — потому что в этом состоянии кода его действительно
 нет.
 
-### Как пользоваться
+#### Как пользоваться
 
 Палитра команд → **GitScope: Сравнить ревизии…**
 
@@ -33,17 +194,19 @@
 { "command": "gitscope.compareRevisions", "args": { "base": "origin/main", "compare": "HEAD" } }
 ```
 
-### В панели
+#### В панели
 
 - слева дерево изменённых файлов со статусами и счётчиками строк, клик прокручивает к файлу;
 - справа все диффы одним сплошным скроллом, с подсветкой синтаксиса;
 - переключение между одной и двумя колонками в шапке;
 - изменённые куски строки подсвечиваются внутри строки, а не строкой целиком;
+- длинные строки переносятся и занимают несколько строк, номер остаётся у первой;
 - свёрнутые строки между изменениями разворачиваются по кнопке;
+- файлы сворачиваются по одному и все разом — кнопками в шапке;
 - в шапке видно, когда последний раз обновлялись ссылки с сервера, и есть кнопка fetch:
   сравнение с `origin/*` врёт, если fetch был неделю назад.
 
-## История файла
+### История файла
 
 Правый клик в редакторе или в проводнике → **GitScope: История файла…**, либо
 палитра команд для открытого файла.
@@ -81,7 +244,7 @@
 | `gitscope.diff.collapseFilesOverLines` | 1500 | Порог, после которого файл сворачивается сам. 0 — не сворачивать |
 | `gitscope.diff.defaultViewMode` | `unified` | Режим при открытии панели (в обеих панелях) |
 
-## Чего пока нет
+### Чего пока нет
 
 В сравнении ревизий — рабочего дерева, индекса и стеша (только коммиты, ветки и
 теги). Везде: отметок «просмотрено», комментариев, захода внутрь подмодулей,
@@ -89,7 +252,7 @@
 коммитов, поиска по истории файла и сравнения двух произвольных его версий между
 собой.
 
-## Разработка
+### Разработка
 
 ```bash
 pnpm install
@@ -105,7 +268,7 @@ pnpm package        # .vsix
 Отладка: открыть папку в VS Code и нажать **F5** — поднимется Extension Development
 Host, обе сборки уйдут в watch-режим.
 
-## Устройство
+### Устройство
 
 Слои разложены так, чтобы будущие git-функции переиспользовали нижние два:
 
@@ -125,6 +288,9 @@ Host, обе сборки уйдут в watch-режим.
 - **Загрузка двухфазная**: список файлов считается сразу, патчи подтягиваются по одному,
   когда файл подъезжает к экрану.
 - **Строки виртуализированы** — и в сравнении, и в истории их бывают десятки тысяч.
+- **Перенос считается, а не меряется**: виртуализатору нужны высоты до отрисовки,
+  поэтому число визуальных строк выводится из числа колонок, которое канва отдаёт
+  и в CSS. Это работает только потому, что перенос жёсткий (`word-break: break-all`).
 - **Переименования отслеживаются своим кодом, а не `git log --follow`.** Флаг
   умеет ровно одно из двух: либо вести историю через переименования, либо
   показывать слияния — merge-коммиты он выбрасывает молча. Вместо него страница

@@ -1,4 +1,11 @@
 {
   "extension.displayName": "GitScope — сравнение и история файла",
-  "extension.description": "Сравнение любых двух ревизий git — как «Files changed» в pull request — и полная история файла: дерево файлов, две колонки, словный diff и подсветка синтаксиса."
+  "extension.description": "Сравнение любых двух ревизий git — как «Files changed» в pull request — и полная история файла: дерево файлов, две колонки, словный diff и подсветка синтаксиса.",
+  "command.compareRevisions.title": "Сравнить ревизии…",
+  "command.fileHistory.title": "История файла…",
+  "configuration.contextLines.description": "Сколько строк контекста показывать вокруг изменений.",
+  "configuration.collapseFilesOverLines.description": "Файлы с диффом длиннее указанного числа строк по умолчанию свёрнуты. 0 — не сворачивать.",
+  "configuration.defaultViewMode.description": "Режим отображения диффа при открытии панели.",
+  "configuration.defaultViewMode.unified": "Одна колонка, добавленные и удалённые строки подряд",
+  "configuration.defaultViewMode.split": "Две колонки: слева базовая ревизия, справа сравниваемая"
 }

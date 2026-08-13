@@ -15,7 +15,7 @@ export default tseslint.config(
     // Конфиги сборки — обычные node-скрипты, а не код расширения.
     files: ['**/*.mjs', '**/*.mts'],
     languageOptions: {
-      globals: { process: 'readonly', console: 'readonly', URL: 'readonly' },
+      globals: { process: 'readonly', console: 'readonly', URL: 'readonly', Buffer: 'readonly' },
     },
   },
 );
