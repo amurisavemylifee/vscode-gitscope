@@ -1,7 +1,7 @@
 {
-  "name": "gitscope",
-  "displayName": "GitScope",
-  "description": "Сравнение состояний кода в любых двух точках истории git — как «Files changed» в pull request",
+  "name": "revisor",
+  "displayName": "%extension.displayName%",
+  "description": "%extension.description%",
   "version": "0.1.0",
   "publisher": "amurisavemylifee",
   "license": "MIT",
