@@ -21,6 +21,8 @@ const noFetch: FetchInfo = { inProgress: false, hasRemote: false };
 const renderHeader = (props: Partial<Parameters<typeof CompareHeader>[0]> = {}) => {
   const handlers = {
     onViewModeChange: vi.fn(),
+    onCollapseAll: vi.fn(),
+    onExpandAll: vi.fn(),
     onPickRevision: vi.fn(),
     onSwap: vi.fn(),
     onReload: vi.fn(),
@@ -85,6 +87,23 @@ describe('CompareHeader', () => {
     expect(screen.getByRole('button', { name: 'Перечитать сравнение' })).toBeDisabled();
   });
 
+  it('сворачивает и разворачивает все файлы разом', async () => {
+    const handlers = renderHeader({ summary: summary({ files: Array.from({ length: 3 }, () => null) as never }) });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Свернуть все файлы' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Развернуть все файлы' }));
+
+    expect(handlers.onCollapseAll).toHaveBeenCalledTimes(1);
+    expect(handlers.onExpandAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('без файлов сворачивать нечего — кнопки заблокированы', () => {
+    renderHeader();
+
+    expect(screen.getByRole('button', { name: 'Свернуть все файлы' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Развернуть все файлы' })).toBeDisabled();
+  });
+
   it('без remote про свежесть ссылок не пишет', () => {
     renderHeader();
 
@@ -100,6 +119,8 @@ describe('CompareHeader', () => {
         loading={false}
         viewMode="unified"
         onViewModeChange={vi.fn()}
+        onCollapseAll={vi.fn()}
+        onExpandAll={vi.fn()}
         onPickRevision={vi.fn()}
         onSwap={vi.fn()}
         onReload={vi.fn()}
@@ -119,6 +140,8 @@ describe('CompareHeader', () => {
         loading={false}
         viewMode="unified"
         onViewModeChange={vi.fn()}
+        onCollapseAll={vi.fn()}
+        onExpandAll={vi.fn()}
         onPickRevision={vi.fn()}
         onSwap={vi.fn()}
         onReload={vi.fn()}

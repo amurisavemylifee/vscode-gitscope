@@ -13,6 +13,8 @@ interface CompareHeaderProps {
   readonly loading: boolean;
   readonly viewMode: ViewMode;
   readonly onViewModeChange: (mode: ViewMode) => void;
+  readonly onCollapseAll: () => void;
+  readonly onExpandAll: () => void;
   readonly onPickRevision: (side: Side) => void;
   readonly onSwap: () => void;
   readonly onReload: () => void;
@@ -28,11 +30,15 @@ export function CompareHeader({
   loading,
   viewMode,
   onViewModeChange,
+  onCollapseAll,
+  onExpandAll,
   onPickRevision,
   onSwap,
   onReload,
   onFetch,
 }: CompareHeaderProps) {
+  const hasFiles = (summary?.files.length ?? 0) > 0;
+
   return (
     <header className="gs-header">
       <div className="gs-header__row">
@@ -73,6 +79,26 @@ export function CompareHeader({
             onClick={() => onViewModeChange('split')}
           />
         </div>
+
+        <button
+          type="button"
+          className="gs-header__icon-button"
+          title="Свернуть все файлы"
+          disabled={!hasFiles}
+          onClick={onCollapseAll}
+        >
+          <Icon name="fold" size={15} />
+        </button>
+
+        <button
+          type="button"
+          className="gs-header__icon-button"
+          title="Развернуть все файлы"
+          disabled={!hasFiles}
+          onClick={onExpandAll}
+        >
+          <Icon name="unfold" size={15} />
+        </button>
 
         <button
           type="button"

@@ -241,6 +241,22 @@ describe('App', () => {
     expect(container.querySelector('.gs-file-header__name')?.textContent).toBe('src/a.ts');
   });
 
+  it('кнопки шапки сворачивают и разворачивают все файлы разом', async () => {
+    respondWith(state({ summary: summary([file('src/a.ts'), file('src/b.ts')]) }));
+    const { container } = render(<App />);
+
+    await screen.findByText('2 изменённых файла');
+    // Липкая полоса показывает файл, на который смотрят: по её кнопке и видно,
+    // свёрнут он или нет.
+    const toggle = () => container.querySelector('.gs-canvas__sticky button');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Свернуть все файлы' }));
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Развернуть все файлы' }));
+    expect(toggle()).toHaveAttribute('aria-expanded', 'true');
+  });
+
   it('во время подсчёта сравнения не предлагает выбирать ревизии заново', async () => {
     respondWith(state({ loading: true }));
     render(<App />);

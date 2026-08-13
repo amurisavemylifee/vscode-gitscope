@@ -73,6 +73,11 @@ export function App() {
     return flattenFileTree(tree).map((node) => changes[node.index] as FileChange);
   }, [summary]);
 
+  const collapseAll = useCallback(() => setCollapsed(new Set(files.map((file) => file.path))), [files]);
+  // Большие файлы, свёрнутые самой панелью, остаются свёрнутыми: развернуть их
+  // все разом — это разбор десятков тысяч строк и решение не на одну кнопку.
+  const expandAll = useCallback(() => setCollapsed(new Set()), []);
+
   const selectFile = useCallback(
     (path: string) => {
       const fileIndex = files.findIndex((file) => file.path === path);
@@ -102,6 +107,8 @@ export function App() {
       loading={loading}
       viewMode={viewMode ?? settings.viewMode}
       onViewModeChange={changeViewMode}
+      onCollapseAll={collapseAll}
+      onExpandAll={expandAll}
       onPickRevision={actions.pickRevision}
       onSwap={actions.swapRevisions}
       onReload={actions.reload}
