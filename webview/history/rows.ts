@@ -164,10 +164,10 @@ export function buildPatchRows(
   const emitGap = (from: number, to: number, baseFrom: number, gapIndex: number): EmittedGap => {
     // У обрезанного патча промежутки неизвестны — считаем, что скрытое есть.
     if (patch.truncated) {
-      return { hidden: true, headerAt: rows.length, prepended: 0 };
+      return { hidden: true, headerAt: rows.length, opened: [] };
     }
     if (from > to) {
-      return { hidden: false, headerAt: rows.length, prepended: 0 };
+      return { hidden: false, headerAt: rows.length, opened: [] };
     }
     const baseOffset = baseFrom - from;
     let lastHiddenEnd: number | undefined;
@@ -197,8 +197,11 @@ export function buildPatchRows(
 
     // Строки за последним пропуском идут дальше подряд с кодом хунка: каждая
     // дала ровно одну строку списка, поэтому заголовку место перед ними.
-    const prepended = lastHiddenEnd === undefined ? 0 : to - lastHiddenEnd;
-    return { hidden: lastHiddenEnd !== undefined, headerAt: rows.length - prepended, prepended };
+    const opened: string[] = [];
+    for (let line = (lastHiddenEnd ?? to) + 1; line <= to; line += 1) {
+      opened.push(context?.get(line)?.text ?? '');
+    }
+    return { hidden: lastHiddenEnd !== undefined, headerAt: rows.length - opened.length, opened };
   };
 
   let previousEnd = 0;
@@ -216,7 +219,7 @@ export function buildPatchRows(
       rows.splice(gap.headerAt, 0, {
         kind: 'hunk',
         key: `hunk:${hunkIndex}`,
-        hunk: withOpenedContext(hunk, gap.prepended),
+        hunk: withOpenedContext(hunk, gap.opened),
       });
     }
     const hunkTokens = tokens?.hunks[hunkIndex];

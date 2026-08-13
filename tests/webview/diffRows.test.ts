@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FileChange, FilePatch, Hunk } from '@shared/model';
-import { buildDiffRows, rowAtOffset, rowHeight, type DiffRow } from '../../webview/diff/rows';
+import { buildDiffRows, rowAtOffset, rowHeight, withOpenedContext, type DiffRow } from '../../webview/diff/rows';
 import type { PatchState } from '../../webview/hooks/usePatches';
 
 const file = (overrides: Partial<FileChange> = {}): FileChange => ({
@@ -160,6 +160,46 @@ describe('buildDiffRows', () => {
     }).rows;
 
     expect(new Set(rows.map((row) => row.key)).size).toBe(rows.length);
+  });
+});
+
+describe('withOpenedContext', () => {
+  const header = (): Hunk => ({
+    ...hunk(2),
+    baseStart: 10,
+    compareStart: 10,
+    header: 'export function run() {',
+  });
+
+  it('без открытых строк оставляет заголовок как есть', () => {
+    expect(withOpenedContext(header(), [])).toEqual(header());
+  });
+
+  it('открытые строки входят в счёт блока: он начинается выше и длиннее', () => {
+    expect(withOpenedContext(header(), ['  a();', '  b();'])).toMatchObject({
+      baseStart: 8,
+      baseCount: 4,
+      compareStart: 8,
+      compareCount: 4,
+    });
+  });
+
+  // Подпись раздела git берёт над началом хунка. Блок уехал выше, и настоящая
+  // подпись нового начала лежит среди ещё свёрнутых строк — взять её неоткуда.
+  it('держит подпись, пока открытые строки не начинают свой раздел', () => {
+    expect(withOpenedContext(header(), ['  a();', '', '\tif (x) {'])).toMatchObject({
+      header: 'export function run() {',
+    });
+  });
+
+  it('убирает подпись, если открытая строка сама начинает раздел', () => {
+    expect(withOpenedContext(header(), ['  a();', 'function other() {'])).toMatchObject({ header: '' });
+  });
+
+  it('началом раздела считает то же, что git: букву, «_» или «$» в первой позиции', () => {
+    expect(withOpenedContext(header(), ['_private() {'])).toMatchObject({ header: '' });
+    expect(withOpenedContext(header(), ['$scope.x = 1;'])).toMatchObject({ header: '' });
+    expect(withOpenedContext(header(), ['} else {'])).toMatchObject({ header: 'export function run() {' });
   });
 });
 

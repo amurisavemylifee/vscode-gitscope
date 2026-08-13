@@ -148,9 +148,15 @@ export interface EmittedGap {
   readonly hidden: boolean;
   /** Место заголовка в общем списке — сразу за последним пропуском. */
   readonly headerAt: number;
-  /** Сколько строк промежутка открыто после последнего пропуска. */
-  readonly prepended: number;
+  /** Строки промежутка, открытые после последнего пропуска: они идут под заголовком. */
+  readonly opened: readonly string[];
 }
+
+/**
+ * Начало раздела по правилу git: строка, начинающаяся с буквы, «_» или «$».
+ * Тем же признаком git выбирает подпись к `@@ … @@` (xdl_default_find_func).
+ */
+const startsSection = (text: string) => /^[A-Za-z_$]/.test(text);
 
 /**
  * Заголовок описывает то, что идёт под ним.
@@ -158,18 +164,26 @@ export interface EmittedGap {
  * Открытые строки промежутка стоят между пропуском и хунком, то есть под
  * заголовком, — значит и в его счёт они входят: блок начинается на столько
  * строк выше и на столько же длиннее.
+ *
+ * С подписью раздела так не выйдет: git взял её над прежним началом хунка, а
+ * настоящая подпись нового начала лежит ещё выше — среди строк, которые пока
+ * свёрнуты, и взять её неоткуда. Зато видно, когда прежняя перестала быть
+ * правдой: если открытая строка сама начинает раздел, блок теперь начинается
+ * выше него, и подпись говорит про код, который сам же и показан ниже. В этом
+ * случае убираем её — номера остаются.
  */
-export function withOpenedContext(hunk: Hunk, prepended: number): Hunk {
-  if (prepended === 0) {
+export function withOpenedContext(hunk: Hunk, opened: readonly string[]): Hunk {
+  if (opened.length === 0) {
     return hunk;
   }
-  return {
+  const shifted = {
     ...hunk,
-    baseStart: hunk.baseStart - prepended,
-    baseCount: hunk.baseCount + prepended,
-    compareStart: hunk.compareStart - prepended,
-    compareCount: hunk.compareCount + prepended,
+    baseStart: hunk.baseStart - opened.length,
+    baseCount: hunk.baseCount + opened.length,
+    compareStart: hunk.compareStart - opened.length,
+    compareCount: hunk.compareCount + opened.length,
   };
+  return opened.some(startsSection) ? { ...shifted, header: '' } : shifted;
 }
 
 export function buildDiffRows({
@@ -266,10 +280,10 @@ export function buildDiffRows({
     const emitGap = (compareFrom: number, compareTo: number, baseFrom: number, gapIndex: number): EmittedGap => {
       // У обрезанного патча промежутки неизвестны — считаем, что скрытое есть.
       if (patch.truncated) {
-        return { hidden: true, headerAt: rows.length, prepended: 0 };
+        return { hidden: true, headerAt: rows.length, opened: [] };
       }
       if (compareFrom > compareTo) {
-        return { hidden: false, headerAt: rows.length, prepended: 0 };
+        return { hidden: false, headerAt: rows.length, opened: [] };
       }
       const baseOffset = baseFrom - compareFrom;
       let lastHiddenEnd: number | undefined;
@@ -315,8 +329,11 @@ export function buildDiffRows({
 
       // Строки за последним пропуском идут дальше подряд с кодом хунка: каждая
       // дала ровно одну строку списка, поэтому заголовку место перед ними.
-      const prepended = lastHiddenEnd === undefined ? 0 : compareTo - lastHiddenEnd;
-      return { hidden: lastHiddenEnd !== undefined, headerAt: rows.length - prepended, prepended };
+      const opened: string[] = [];
+      for (let line = (lastHiddenEnd ?? compareTo) + 1; line <= compareTo; line += 1) {
+        opened.push(fetched?.get(line)?.text ?? '');
+      }
+      return { hidden: lastHiddenEnd !== undefined, headerAt: rows.length - opened.length, opened };
     };
 
     let previousCompareEnd = 0;
@@ -336,7 +353,7 @@ export function buildDiffRows({
           key: `hunk:${file.path}:${hunkIndex}`,
           fileIndex,
           hunkIndex,
-          hunk: withOpenedContext(hunk, gap.prepended),
+          hunk: withOpenedContext(hunk, gap.opened),
         });
       }
 
