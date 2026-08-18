@@ -1,0 +1,33 @@
+/* Переключатель из нескольких кнопок. */
+
+.gs-segmented {
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+  border: 1px solid var(--gs-border);
+  border-radius: var(--gs-radius-md);
+}
+
+.gs-segmented__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--gs-radius-sm);
+  background: transparent;
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+  transition: background 80ms ease, color 80ms ease;
+}
+
+.gs-segmented__button:hover {
+  color: var(--gs-fg);
+}
+
+.gs-segmented__button--active {
+  background: var(--gs-bg-active);
+  color: var(--vscode-list-activeSelectionForeground, var(--gs-fg));
+}

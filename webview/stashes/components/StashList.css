@@ -1,0 +1,217 @@
+.gs-stashes-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: var(--gs-space-4);
+  outline-offset: -1px;
+}
+
+/* --- карточка стеша: устроена так же, как карточка версии (.gs-entry) --- */
+
+.gs-stash {
+  position: relative;
+  padding: 10px 10px 10px 30px;
+  cursor: pointer;
+  transition: background 80ms ease;
+}
+
+.gs-stash:hover {
+  background: var(--gs-bg-hover);
+}
+
+.gs-stash--selected,
+.gs-stash--selected:hover {
+  background: var(--gs-bg-active);
+  color: var(--vscode-list-activeSelectionForeground, var(--gs-fg));
+  /* Полоса вставной тенью, а не рамкой: рамка сдвинула бы содержимое карточки
+     на пиксель, и список дёргался бы при каждом переходе. */
+  box-shadow: inset 2px 0 0 var(--gs-accent);
+}
+
+/* --- линия с точками слева --- */
+
+.gs-stash__rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 26px;
+}
+
+.gs-stash__rail::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 13px;
+  width: 1px;
+  background: color-mix(in srgb, var(--gs-fg-muted) 32%, transparent);
+}
+
+/* У крайних стешей линия начинается и заканчивается точкой, а не обрывается в
+   пустоте на границе списка. */
+.gs-stash--first .gs-stash__rail::before {
+  top: 20px;
+}
+
+.gs-stash--last .gs-stash__rail::before {
+  bottom: calc(100% - 20px);
+}
+
+.gs-stash__dot {
+  position: absolute;
+  top: 15px;
+  left: 8px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--gs-fg-muted);
+  border-radius: 50%;
+  background: var(--gs-bg);
+}
+
+.gs-stash--selected .gs-stash__dot {
+  border-color: var(--gs-accent);
+  background: var(--gs-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gs-accent) 25%, transparent);
+}
+
+/* --- содержимое карточки --- */
+
+.gs-stash__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.gs-stash__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.gs-stash__row--meta {
+  gap: 5px;
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+}
+
+.gs-stash--selected .gs-stash__row--meta {
+  color: inherit;
+  opacity: 0.75;
+}
+
+.gs-stash__chevron {
+  flex: none;
+  opacity: 0.7;
+}
+
+.gs-stash__subject {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-stash__ref,
+.gs-stash__branch,
+.gs-stash__when,
+.gs-stash__author,
+.gs-stash__note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-stash__ref {
+  flex: none;
+  font-family: var(--gs-font-code);
+}
+
+.gs-stash__separator {
+  flex: none;
+  opacity: 0.6;
+}
+
+.gs-stash__spacer {
+  flex: 1 1 auto;
+}
+
+/* Коммит, поверх которого сделан стеш, — как строка прежнего имени у
+   переименованного файла (.gs-entry__renamed): своя строка и свой цвет. */
+.gs-stash__base {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--gs-renamed-fg);
+  font-size: 11px;
+}
+
+.gs-stash__base-sha {
+  flex: none;
+  font-family: var(--gs-font-code);
+}
+
+.gs-stash__base-subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+/* Отметка «есть файлы, которых не было в git» — рядом с заголовком: это то,
+   чего в обычном diff не бывает, и знать об этом надо до открытия стеша. */
+.gs-stash__flag {
+  flex: none;
+  padding: 0 5px;
+  border-radius: var(--gs-radius-sm);
+  background: color-mix(in srgb, var(--vscode-gitDecoration-untrackedResourceForeground, #73c991) 18%, transparent);
+  color: var(--vscode-gitDecoration-untrackedResourceForeground, #73c991);
+  font-size: 10px;
+  line-height: 16px;
+}
+
+/* --- дерево файлов раскрытого стеша --- */
+
+.gs-stashes-list__files {
+  padding-bottom: var(--gs-space-2);
+  border-bottom: 1px solid var(--gs-border);
+}
+
+.gs-stashes-list__files-title {
+  padding: var(--gs-space-1) var(--gs-space-3) var(--gs-space-1) 30px;
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Дерево живёт внутри списка, а не отдельной колонкой: прокрутка у них общая.
+   Отступ слева выравнивает файлы под текстом карточки — свой отступ у строк
+   дерева задан инлайново, по глубине вложенности, и трогать его нельзя. */
+.gs-stashes-list__files .gs-tree {
+  height: auto;
+  overflow: visible;
+  padding: 0 0 0 24px;
+}
+
+.gs-stashes-list__note {
+  padding: var(--gs-space-2) var(--gs-space-3) var(--gs-space-2) 30px;
+  border-bottom: 1px solid var(--gs-border);
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+}
+
+.gs-stashes-list__note--error {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+/* Пометка у файла — той же неброской формы, что «bin» у двоичного файла. */
+.gs-stashes-list__mark {
+  flex: none;
+  color: var(--gs-fg-muted);
+  font-family: var(--gs-font-code);
+  font-size: 10px;
+}

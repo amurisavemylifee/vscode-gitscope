@@ -1,4 +1,7 @@
-.gs-version-header {
+/* Та же полоса, что над версией файла (.gs-version-header): что показано слева,
+   что с этим можно сделать — справа. */
+
+.gs-stash-bar {
   display: flex;
   flex: none;
   align-items: center;
@@ -9,7 +12,7 @@
   background: var(--gs-bg-raised);
 }
 
-.gs-version-header__path {
+.gs-stash-bar__path {
   overflow: hidden;
   flex: 0 1 auto;
   font-family: var(--gs-font-code);
@@ -18,26 +21,21 @@
   white-space: nowrap;
 }
 
-.gs-version-header__spacer {
+.gs-stash-bar__note {
+  flex: none;
+  padding: 0 5px;
+  border-radius: var(--gs-radius-sm);
+  background: color-mix(in srgb, var(--vscode-gitDecoration-untrackedResourceForeground, #73c991) 18%, transparent);
+  color: var(--vscode-gitDecoration-untrackedResourceForeground, #73c991);
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.gs-stash-bar__spacer {
   flex: 1 1 auto;
 }
 
-/* Стрелки и счётчик изменений держатся вместе: это один орган управления. */
-.gs-version-header__nav {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-}
-
-.gs-version-header__counter {
-  min-width: 34px;
-  color: var(--gs-fg-muted);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
-.gs-version-header__action {
+.gs-stash-bar__action {
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -51,11 +49,12 @@
   transition: background 80ms ease, color 80ms ease;
 }
 
-.gs-version-header__action:hover {
+.gs-stash-bar__action:hover:not(:disabled) {
   background: var(--gs-bg-hover);
   color: var(--gs-fg);
 }
 
-.gs-version-header__action--done {
-  color: var(--gs-added-fg);
+.gs-stash-bar__action:disabled {
+  opacity: 0.5;
+  cursor: default;
 }

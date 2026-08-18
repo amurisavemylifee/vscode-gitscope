@@ -2,6 +2,15 @@
 
 ## English
 
+### Unreleased
+
+- **Stashes** — a read-only panel for everything put aside: the list of stashes with messages,
+  branches, dates, authors and the commit each one sits on top of; the selected stash expands
+  into its file tree, and its changes are shown by the same canvas as the compare panel. Files
+  that were not in git and changes that were in the index are marked in the list. A file from a
+  stash opens as a read-only tab, its diff with the base — as a native diff tab. Nothing can be
+  created, applied or dropped from here
+
 ### 0.1.1
 
 - Fixed: in file history the code wrapped at the narrowest width until the view mode was toggled — the wrap width was measured before the scroll area appeared in the markup
@@ -17,6 +26,15 @@
 - Extension name, command titles and setting descriptions are localized to English and Russian
 
 ## Русский
+
+### Не выпущено
+
+- **Стеши** — панель только для чтения: список стешей с сообщениями, ветками, датами,
+  авторами и коммитом, поверх которого каждый сделан; выбранный стеш раскрывается в дерево
+  файлов, а его изменения показывает то же полотно, что и в сравнении ревизий. Файлы, которых
+  не было в git, и изменения из индекса помечены в списке. Файл из стеша открывается вкладкой
+  только для чтения, его сравнение с базой — нативной вкладкой diff. Создать, применить или
+  удалить стеш отсюда нельзя
 
 ### 0.1.1
 

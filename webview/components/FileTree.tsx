@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { buildFileTree, type FileTreeNode } from '@shared/fileTree';
 import type { FileChange } from '@shared/model';
 import { DiffStat } from './DiffStat';
@@ -10,10 +10,15 @@ interface FileTreeProps {
   readonly files: readonly FileChange[];
   readonly activePath: string | null;
   readonly onSelect: (path: string) => void;
+  /**
+   * Дополнительная пометка у файла — например, откуда он взялся в стеше.
+   * Сравнению добавить нечего, поэтому необязательна.
+   */
+  readonly mark?: (file: FileChange) => ReactNode;
 }
 
 /** Дерево изменённых файлов. Клик прокручивает правую панель к нужному файлу. */
-export function FileTree({ files, activePath, onSelect }: FileTreeProps) {
+export function FileTree({ files, activePath, onSelect, mark }: FileTreeProps) {
   const tree = useMemo(() => buildFileTree(files.map((file) => file.path)), [files]);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
 
@@ -37,6 +42,7 @@ export function FileTree({ files, activePath, onSelect }: FileTreeProps) {
         activePath={activePath}
         onToggle={toggle}
         onSelect={onSelect}
+        {...(mark ? { mark } : {})}
       />
     </nav>
   );
@@ -50,9 +56,10 @@ interface TreeLevelProps {
   readonly activePath: string | null;
   readonly onToggle: (path: string) => void;
   readonly onSelect: (path: string) => void;
+  readonly mark?: (file: FileChange) => ReactNode;
 }
 
-function TreeLevel({ nodes, depth, files, collapsed, activePath, onToggle, onSelect }: TreeLevelProps) {
+function TreeLevel({ nodes, depth, files, collapsed, activePath, onToggle, onSelect, mark }: TreeLevelProps) {
   return (
     <>
       {nodes.map((node) => {
@@ -84,6 +91,7 @@ function TreeLevel({ nodes, depth, files, collapsed, activePath, onToggle, onSel
                   activePath={activePath}
                   onToggle={onToggle}
                   onSelect={onSelect}
+                  {...(mark ? { mark } : {})}
                 />
               )}
             </div>
@@ -106,6 +114,7 @@ function TreeLevel({ nodes, depth, files, collapsed, activePath, onToggle, onSel
           >
             <StatusBadge status={file.status} />
             <span className="gs-tree__name">{node.name}</span>
+            {mark?.(file)}
             {file.binary ? (
               <span className="gs-tree__binary">bin</span>
             ) : (

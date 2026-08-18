@@ -62,8 +62,14 @@ export class RepositoryLocator {
   /**
    * Выбирает репозиторий: молча, если он один, иначе спрашивает.
    * По умолчанию предлагает тот, которому принадлежит открытый файл.
+   *
+   * Заголовок задаётся вызывающим: вопрос звучит по-разному в зависимости от
+   * того, ради чего репозиторий выбирают.
    */
-  async pick(signal?: AbortSignal): Promise<GitRepository | undefined> {
+  async pick({
+    title = 'GitScope: в каком репозитории сравнивать?',
+    signal,
+  }: { readonly title?: string; readonly signal?: AbortSignal } = {}): Promise<GitRepository | undefined> {
     const repositories = await this.list(signal);
 
     if (repositories.length === 0) {
@@ -85,7 +91,7 @@ export class RepositoryLocator {
         description: repository.root,
         repository,
       })),
-      { title: 'GitScope: в каком репозитории сравнивать?', matchOnDescription: true },
+      { title, matchOnDescription: true },
     );
 
     return picked?.repository;

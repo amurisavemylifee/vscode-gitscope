@@ -47,6 +47,7 @@ export default defineConfig({
         'webview/syntax/languages.ts',
         'webview/main.tsx',
         'webview/history/main.tsx',
+        'webview/stashes/main.tsx',
         'webview/vite-env.d.ts',
       ],
       reporter: ['text', 'html'],

@@ -46,4 +46,13 @@ git('add', '--all');
 git('commit', '--quiet', '--message', 'коммит в ветке');
 git('checkout', '--quiet', 'main');
 
+// Два стеша: один со своим сообщением и файлом вне git, второй — обычный.
+// Панель стешей должна открываться на непустом списке, а не на заглушке.
+write('src/app.ts', ['export function run() {', '  return 7;', '}', ''].join('\n'));
+write('scratch.txt', 'черновик, которого нет в git\n');
+git('stash', 'push', '--quiet', '--include-untracked', '--message', 'черновик из e2e');
+
+write('README.md', '# Тестовый репозиторий\n\nвторая строка\n');
+git('stash', 'push', '--quiet');
+
 console.log(`Репозиторий для e2e готов: ${root}`);

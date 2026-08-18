@@ -1,0 +1,80 @@
+/* Шапка устроена так же, как в истории файла (.gs-history-header): значок,
+   подпись, плашка репозитория и кнопки справа. */
+
+.gs-stashes-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--gs-space-2);
+  min-height: 38px;
+  padding: 0 var(--gs-space-3);
+  border-bottom: 1px solid var(--gs-border);
+  background: var(--gs-bg-raised);
+}
+
+.gs-stashes-header__icon {
+  flex: none;
+  color: var(--gs-fg-muted);
+}
+
+.gs-stashes-header__title {
+  flex: none;
+  font-weight: 600;
+}
+
+.gs-stashes-header__repository {
+  flex: none;
+  overflow: hidden;
+  padding: 1px 6px;
+  border-radius: var(--gs-radius-sm);
+  background: color-mix(in srgb, var(--gs-fg-muted) 14%, transparent);
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-stashes-header__spacer {
+  flex: 1 1 auto;
+}
+
+.gs-stashes-header__count {
+  flex: none;
+  color: var(--gs-fg-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.gs-stashes-header__action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  border: none;
+  border-radius: var(--gs-radius-sm);
+  background: transparent;
+  color: var(--gs-fg-muted);
+}
+
+.gs-stashes-header__action:hover:not(:disabled) {
+  background: var(--gs-bg-hover);
+  color: var(--gs-fg);
+}
+
+.gs-stashes-header__action--spinning svg {
+  animation: gs-spin 900ms linear infinite;
+}
+
+@keyframes gs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-stashes-header__action--spinning svg {
+    animation: none;
+  }
+}

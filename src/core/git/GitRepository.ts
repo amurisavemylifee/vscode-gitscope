@@ -8,6 +8,7 @@ import { LOG_FORMAT, parseLog } from './parsers/parseLog';
 import { parseNameStatus, type NameStatusEntry } from './parsers/parseNameStatus';
 import { parseNumstat, type NumstatEntry } from './parsers/parseNumstat';
 import { REF_FORMAT, parseRefs } from './parsers/parseRefs';
+import { STASH_FORMAT, parseStashList, type StashRecord } from './parsers/parseStashList';
 import { parseUnifiedDiff, type ParsedFileDiff } from './parsers/parseUnifiedDiff';
 import type { CommitInfo, RefInfo } from './types';
 
@@ -142,6 +143,38 @@ export class GitRepository {
     args.push(revision ?? '--all', '--');
 
     const output = await this.git.text(args, { cwd: this.root, ...(signal ? { signal } : {}) });
+    return parseLog(output);
+  }
+
+  /**
+   * Стеши репозитория, свежий первым — в том же порядке, что у `git stash list`.
+   *
+   * Позиционная ссылка `stash@{n}` попадает в запись только чтобы её показать:
+   * она сдвигается, как только какой-нибудь стеш снимут, поэтому дальше в
+   * git-команды уходит SHA.
+   */
+  async listStashes(options: AbortOption = {}): Promise<StashRecord[]> {
+    const output = await this.git.text(['stash', 'list', `--format=${STASH_FORMAT}`], {
+      cwd: this.root,
+      ...options,
+    });
+    return parseStashList(output);
+  }
+
+  /**
+   * Описания нескольких коммитов одним вызовом.
+   *
+   * Спрашивать про каждый отдельно — это отдельный процесс git на коммит, а
+   * списку стешей тема базового коммита нужна сразу у всех карточек.
+   */
+  async describeCommits(shas: readonly string[], options: AbortOption = {}): Promise<CommitInfo[]> {
+    if (shas.length === 0) {
+      return [];
+    }
+    const output = await this.git.text(['show', '--no-patch', `--format=${LOG_FORMAT}`, ...shas], {
+      cwd: this.root,
+      ...options,
+    });
     return parseLog(output);
   }
 

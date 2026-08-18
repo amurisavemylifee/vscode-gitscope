@@ -1,6 +1,7 @@
 import type { HistoryEntry } from '@shared/historyModel';
 import type { ViewMode } from '@shared/model';
-import { Icon, type IconName } from '../../components/Icon';
+import { Icon } from '../../components/Icon';
+import { SegmentedButton } from '../../components/Segmented';
 import { StatusBadge } from '../../components/StatusBadge';
 import './VersionHeader.css';
 
@@ -129,29 +130,5 @@ export function VersionHeader({
         <Icon name="external" size={14} />
       </button>
     </header>
-  );
-}
-
-function SegmentedButton({
-  active,
-  icon,
-  label,
-  onClick,
-}: {
-  readonly active: boolean;
-  readonly icon?: IconName;
-  readonly label: string;
-  readonly onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className={`gs-segmented__button${active ? ' gs-segmented__button--active' : ''}`}
-      title={label}
-      aria-pressed={active}
-      onClick={onClick}
-    >
-      {icon ? <Icon name={icon} size={14} /> : label}
-    </button>
   );
 }

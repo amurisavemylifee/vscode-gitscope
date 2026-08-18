@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
 import { HISTORY_PANEL_VIEW_TYPE } from '@shared/historyProtocol';
 import { COMPARE_PANEL_VIEW_TYPE } from '@shared/protocol';
+import { STASH_PANEL_VIEW_TYPE } from '@shared/stashProtocol';
 import { ComparePanel } from './features/compare/ComparePanel';
 import { runCompareCommand, type CompareCommandArgs } from './features/compare/compareCommand';
 import { HistoryPanel } from './features/history/HistoryPanel';
 import { runFileHistoryCommand, type FileHistoryCommandArgs } from './features/history/fileHistoryCommand';
+import { StashPanel } from './features/stashes/StashPanel';
+import { runStashesCommand, type StashesCommandArgs } from './features/stashes/stashesCommand';
 import { createOutputChannelLogger } from './services/logging';
 import { FILE_VERSION_SCHEME, FileVersionContentProvider } from './services/FileVersionDocuments';
 import { RepositoryLocator } from './services/RepositoryLocator';
@@ -34,6 +37,13 @@ export function activate(context: vscode.ExtensionContext): void {
         report(error);
       }
     }),
+    vscode.commands.registerCommand('gitscope.stashes', async (args?: StashesCommandArgs) => {
+      try {
+        await runStashesCommand(context.extensionUri, locator, logger, args ?? {});
+      } catch (error) {
+        report(error);
+      }
+    }),
     vscode.workspace.registerTextDocumentContentProvider(
       FILE_VERSION_SCHEME,
       new FileVersionContentProvider(locator, logger),
@@ -50,6 +60,13 @@ export function activate(context: vscode.ExtensionContext): void {
         // История тоже перечитывается заново: файл мог измениться, а показывать
         // вчерашний список версий как сегодняшний нельзя.
         HistoryPanel.revive(panel, context.extensionUri, logger);
+      },
+    }),
+    vscode.window.registerWebviewPanelSerializer(STASH_PANEL_VIEW_TYPE, {
+      deserializeWebviewPanel: async (panel) => {
+        // Список стешей тоже перечитывается заново: стеши снимают и создают
+        // между сеансами, и вчерашний список сегодня уже неправда.
+        StashPanel.revive(panel, context.extensionUri, logger);
       },
     }),
   );

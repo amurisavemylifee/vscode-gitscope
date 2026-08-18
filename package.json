@@ -29,12 +29,14 @@
     "branch",
     "review",
     "history",
-    "revisions"
+    "revisions",
+    "stash"
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
     "onWebviewPanel:gitscope.compare",
-    "onWebviewPanel:gitscope.fileHistory"
+    "onWebviewPanel:gitscope.fileHistory",
+    "onWebviewPanel:gitscope.stashes"
   ],
   "contributes": {
     "commands": [
@@ -49,6 +51,12 @@
         "title": "%command.fileHistory.title%",
         "category": "GitScope",
         "icon": "$(history)"
+      },
+      {
+        "command": "gitscope.stashes",
+        "title": "%command.stashes.title%",
+        "category": "GitScope",
+        "icon": "$(archive)"
       }
     ],
     "menus": {

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import type { HistoryEntry } from '@shared/historyModel';
 import { formatDateTime, formatRelativeTime } from '@shared/time';
+import { CopyShaButton } from '../../components/CopyShaButton';
 import { DiffStat } from '../../components/DiffStat';
 import { Icon } from '../../components/Icon';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -15,9 +15,6 @@ export const entryCardHeight = (entry: HistoryEntry): number =>
 
 /** Идентификатор карточки в DOM: по нему список сообщает, что сейчас выделено. */
 export const entryCardId = (entryId: string): string => `gs-entry-${entryId}`;
-
-/** Сколько держать отметку об успешном копировании. */
-const COPIED_FEEDBACK_MS = 1200;
 
 interface EntryCardProps {
   readonly entry: HistoryEntry;
@@ -99,7 +96,11 @@ export function EntryCard({ entry, selected, first, last, onSelect, onCopySha }:
             <span className="gs-entry__sha-text">на диске</span>
           ) : (
             <>
-              <CopyShaButton shortSha={entry.shortSha ?? ''} onCopy={onCopySha} />
+              <CopyShaButton
+                shortSha={entry.shortSha ?? ''}
+                title="Скопировать SHA коммита"
+                onCopy={onCopySha}
+              />
               <span className="gs-entry__separator">·</span>
               <span className="gs-entry__when">{formatDateTime(entry.authoredAt ?? '')}</span>
             </>
@@ -109,40 +110,5 @@ export function EntryCard({ entry, selected, first, last, onSelect, onCopySha }:
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * Короткий SHA, он же кнопка копирования.
- *
- * Отдельной кнопки под это нет намеренно: SHA — единственное, что отсюда
- * копируют, и щёлкать удобнее по самой надписи. Значок рядом проявляется под
- * курсором, но место занимает всегда — иначе строка дёргалась бы при наведении.
- */
-function CopyShaButton({ shortSha, onCopy }: { readonly shortSha: string; readonly onCopy: () => Promise<unknown> }) {
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!copied) {
-      return;
-    }
-    const timer = setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
-    return () => clearTimeout(timer);
-  }, [copied]);
-
-  return (
-    <button
-      type="button"
-      className={`gs-entry__sha${copied ? ' gs-entry__sha--copied' : ''}`}
-      title={copied ? 'SHA скопирован' : 'Скопировать SHA коммита'}
-      onClick={(event) => {
-        // Клик по SHA — про буфер обмена, а не про выбор версии.
-        event.stopPropagation();
-        void onCopy().then(() => setCopied(true));
-      }}
-    >
-      {shortSha}
-      <Icon name={copied ? 'check' : 'copy'} size={10} className="gs-entry__sha-icon" />
-    </button>
   );
 }

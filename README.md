@@ -6,11 +6,12 @@
 
 ## English
 
-VS Code extension for reading git changes. Two features:
+VS Code extension for reading git changes. Three features:
 
 - **compare the state of the code** at any two points of history — like the “Files changed”
   tab of a pull request;
-- **file history** — every version of the open file on the left, the selected one on the right.
+- **file history** — every version of the open file on the left, the selected one on the right;
+- **stashes** — the list of what is put aside, with contents, dates and base commits.
 
 > The panel interface is currently in Russian; command titles, setting descriptions and the
 > marketplace listing follow the VS Code display language.
@@ -82,6 +83,34 @@ pair does not tear the history apart either. Merges are shown alongside ordinary
 edit that arrived in a branch as conflict resolution lives exactly in the merge commit.
 Versions load page by page as the list scrolls.
 
+### Stashes
+
+Command palette → **GitScope: Stashes…**
+
+On the left, the stashes, newest first: the stash message (for one made by a plain `git stash`
+— the branch it was put aside on), the `stash@{n}` reference, a short SHA that copies on click,
+relative and exact dates, the author, counters of files and lines. On its own line, the commit
+the stash sits on top of: a stash taken three weeks ago off someone else's branch is a
+completely different stash, and that has to be clear without opening it. The list walks with
+arrows, Home/End and PageUp/PageDown.
+
+The selected stash expands right inside the list and shows its file tree, while the right side
+shows all of its changes in one scroll — the same canvas as in the compare panel, with word
+diff, highlighting, one or two columns and expandable context. The stash is compared against
+its base: the commit it was made on top of.
+
+Everything a stash hides is shown as one list, with marks:
+
+- **новый** — the file was not in git at all (the stash was made with `-u`), so it is shown in
+  full;
+- **индекс** — the change was in the index, and only `git stash pop --index` puts it back there.
+
+Buttons in the header on the right open a file from the stash as a separate read-only editor
+tab, or its comparison with the base as a native diff tab.
+
+The panel changes nothing: no creating, applying or dropping a stash from here. The list
+re-reads itself whenever the panel becomes active again — stashes get moved from the terminal.
+
 ### Settings
 
 | Setting | Default | What it does |
@@ -93,7 +122,8 @@ Versions load page by page as the list scrolls.
 ### Not there yet
 
 In revision comparison — the working tree, the index and stashes (commits, branches and tags
-only). Everywhere: “viewed” marks, comments, stepping inside submodules, viewing images
+only; stashes have their own panel). In the stash panel — creating, applying and dropping: it
+only shows. Everywhere: “viewed” marks, comments, stepping inside submodules, viewing images
 (binary files are shown as sizes), a visual commit graph, search across a file's history, and
 comparing two arbitrary versions of a file with each other.
 
@@ -123,7 +153,7 @@ The layers are arranged so that future git features reuse the bottom two:
 | `src/core/` | Node | Running `git` and parsing its output. Knows nothing about `vscode`, tested with plain Vitest |
 | `src/services/` | `core` + `vscode` | Workspace repositories, revisions, comparisons, settings |
 | `src/features/` | everything above | Commands, pickers, webview panels |
-| `webview/` | `src/shared/` | React apps of the panels: `webview/` — comparison, `webview/history/` — file history |
+| `webview/` | `src/shared/` | React apps of the panels: `webview/` — comparison, `webview/history/` — file history, `webview/stashes/` — stashes |
 
 A few decisions worth knowing up front:
 
@@ -161,11 +191,12 @@ A few decisions worth knowing up front:
 
 ## Русский
 
-Расширение VS Code для обзора изменений в git. Две функции:
+Расширение VS Code для обзора изменений в git. Три функции:
 
 - **сравнение состояний кода** в любых двух точках истории — как вкладка
   «Files changed» у pull request;
-- **история файла** — все версии открытого файла слева, выбранная версия справа.
+- **история файла** — все версии открытого файла слева, выбранная версия справа;
+- **стеши** — список отложенного с их содержимым, датами и базовыми коммитами.
 
 ### Сравнение ревизий
 
@@ -236,6 +267,36 @@ A few decisions worth knowing up front:
 наравне с обычными коммитами: правка, приехавшая в ветку разрешением конфликта,
 живёт именно в merge-коммите. Версии подгружаются страницами по мере прокрутки.
 
+### Стеши
+
+Палитра команд → **GitScope: Стеши…**
+
+Слева — список стешей, свежие сверху: сообщение стеша (у сделанного обычным
+`git stash` — ветка, на которой его отложили), ссылка `stash@{n}`, короткий SHA с
+копированием по клику, относительная и точная дата, автор, счётчики файлов и
+строк. Отдельной строкой — коммит, поверх которого стеш лежит: стеш, снятый три
+недели назад с чужой ветки, — совсем другой стеш, и понять это надо, не открывая
+его. По списку можно ходить стрелками, Home/End и PageUp/PageDown.
+
+Выбранный стеш раскрывается прямо в списке и показывает своё дерево файлов, а
+справа — все его изменения одним скроллом: то же полотно, что в сравнении
+ревизий, со словным diff, подсветкой, одной или двумя колонками и
+разворачиванием контекста. Сравнивается стеш со своей базой — коммитом, поверх
+которого его сделали.
+
+Всё, что стеш прячет, показано одним списком с пометками:
+
+- **новый** — файла не было в git (стеш делали с `-u`), он показан целиком;
+- **индекс** — изменение лежало в индексе, и вернуть его туда сможет только
+  `git stash pop --index`.
+
+Кнопки в шапке справа открывают файл из стеша отдельной вкладкой редактора
+(read-only) или его сравнение с базой — нативной вкладкой diff.
+
+Панель ничего не меняет: ни создать, ни применить, ни удалить стеш отсюда
+нельзя. Список перечитывается сам, когда панель снова становится активной, —
+стеши двигают из терминала.
+
 ### Настройки
 
 | Настройка | По умолчанию | Что делает |
@@ -246,8 +307,9 @@ A few decisions worth knowing up front:
 
 ### Чего пока нет
 
-В сравнении ревизий — рабочего дерева, индекса и стеша (только коммиты, ветки и
-теги). Везде: отметок «просмотрено», комментариев, захода внутрь подмодулей,
+В сравнении ревизий — рабочего дерева, индекса и стешей (только коммиты, ветки и
+теги; у стешей своя панель). В панели стешей — создания, применения и удаления:
+она только показывает. Везде: отметок «просмотрено», комментариев, захода внутрь подмодулей,
 просмотра картинок (двоичные файлы показываются размерами), визуального графа
 коммитов, поиска по истории файла и сравнения двух произвольных его версий между
 собой.
@@ -278,7 +340,7 @@ Host, обе сборки уйдут в watch-режим.
 | `src/core/` | Node | Запуск `git` и разбор его вывода. Про `vscode` не знает, тестируется обычным Vitest |
 | `src/services/` | `core` + `vscode` | Репозитории воркспейса, ревизии, сравнения, настройки |
 | `src/features/` | всё выше | Команды, пикеры, webview-панели |
-| `webview/` | `src/shared/` | React-приложения панелей: `webview/` — сравнение, `webview/history/` — история файла |
+| `webview/` | `src/shared/` | React-приложения панелей: `webview/` — сравнение, `webview/history/` — история файла, `webview/stashes/` — стеши |
 
 Несколько решений, которые стоит знать заранее:
 

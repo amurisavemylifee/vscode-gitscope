@@ -152,49 +152,6 @@
   font-family: var(--gs-font-code);
 }
 
-/* SHA — сам себе кнопка копирования: подчёркивание пунктиром намекает, что по
-   надписи можно щёлкнуть, а фон под курсором это подтверждает. */
-.gs-entry__sha {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 3px;
-  margin: 0 -4px;
-  padding: 0 4px;
-  border: none;
-  border-radius: var(--gs-radius-sm);
-  background: transparent;
-  color: inherit;
-  font-family: var(--gs-font-code);
-  font-size: inherit;
-  font-variant-numeric: tabular-nums;
-  text-decoration: underline dotted;
-  text-underline-offset: 2px;
-  transition: background 80ms ease, color 80ms ease;
-}
-
-.gs-entry__sha:hover {
-  background: var(--gs-bg-hover);
-  color: var(--gs-fg);
-  text-decoration: underline solid;
-}
-
-.gs-entry__sha--copied,
-.gs-entry__sha--copied:hover {
-  color: var(--gs-added-fg);
-}
-
-/* Место под значок занято всегда: иначе строка дёргалась бы при наведении. */
-.gs-entry__sha-icon {
-  opacity: 0;
-  transition: opacity 80ms ease;
-}
-
-.gs-entry__sha:hover .gs-entry__sha-icon,
-.gs-entry__sha--copied .gs-entry__sha-icon {
-  opacity: 1;
-}
-
 .gs-entry__spacer {
   flex: 1 1 auto;
 }

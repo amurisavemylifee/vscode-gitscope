@@ -3,6 +3,7 @@
   "extension.description": "Compare any two git revisions like a pull request's Files changed, plus the full history of a single file: file tree, split view, word diff and syntax highlighting.",
   "command.compareRevisions.title": "Compare Revisions…",
   "command.fileHistory.title": "File History…",
+  "command.stashes.title": "Stashes…",
   "configuration.contextLines.description": "How many context lines to show around changes.",
   "configuration.collapseFilesOverLines.description": "Files whose diff is longer than this many lines start collapsed. 0 — never collapse.",
   "configuration.defaultViewMode.description": "Diff layout a panel opens with.",

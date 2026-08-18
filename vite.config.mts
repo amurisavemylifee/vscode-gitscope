@@ -34,6 +34,7 @@ export default defineConfig(({ mode }) => ({
       input: {
         main: resolvePath('./webview/main.tsx'),
         history: resolvePath('./webview/history/main.tsx'),
+        stashes: resolvePath('./webview/stashes/main.tsx'),
       },
       output: {
         entryFileNames: '[name].js',

@@ -30,7 +30,7 @@ export function buildWebviewHtml(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
   title: string,
-  entry: 'main' | 'history' = 'main',
+  entry: 'main' | 'history' | 'stashes' = 'main',
 ): string {
   const nonce = createNonce();
   const assetUri = (...segments: string[]) =>
