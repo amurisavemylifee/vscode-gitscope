@@ -9,7 +9,6 @@ import { useResizer } from '../hooks/useResizer';
 import { useSyntaxTheme, useSyntaxTokens } from '../hooks/useSyntaxTokens';
 import { actions } from './api/actions';
 import { persistedState } from './api/bridge';
-import { StashFileBar } from './components/StashFileBar';
 import { StashHeader } from './components/StashHeader';
 import { StashList } from './components/StashList';
 import { useStashContext } from './hooks/useStashContext';
@@ -30,7 +29,7 @@ export function App() {
 
   const stored = useRef(persistedState.read<StoredLayout>()).current;
   const [viewMode, setViewMode] = useState<ViewMode | null>(stored.viewMode ?? null);
-  const [listWidth, setListWidth] = useState(stored.listWidth ?? 320);
+  const [listWidth, setListWidth] = useState(stored.listWidth ?? 430);
   const [selectedSha, setSelectedSha] = useState<string | null>(null);
   const [activePath, setActivePath] = useState<string | null>(null);
   const [scrollTarget, setScrollTarget] = useState<ScrollTarget | null>(null);
@@ -116,21 +115,36 @@ export function App() {
   }, []);
   const startResize = useResizer(listWidth, onListWidthChange, MIN_LIST_WIDTH, MAX_LIST_WIDTH);
 
-  // Открывается то, на что смотрим: файл, который сейчас перед глазами.
-  const activeFile = files.find((file) => file.path === activePath) ?? files[0] ?? null;
-  const openFile = useCallback(() => {
-    if (selectedSha !== null && activeFile) {
-      void actions.openFile(selectedSha, activeFile.path).catch(() => undefined);
-    }
-  }, [selectedSha, activeFile]);
-  const openDiff = useCallback(() => {
-    if (selectedSha !== null && activeFile) {
-      void actions.openDiff(selectedSha, activeFile.path, effectiveViewMode).catch(() => undefined);
-    }
-  }, [selectedSha, activeFile, effectiveViewMode]);
+  // Каждый файл открывает сам себя — кнопки лежат прямо в его заголовке.
+  const openFile = useCallback(
+    (path: string) => {
+      if (selectedSha !== null) {
+        void actions.openFile(selectedSha, path).catch(() => undefined);
+      }
+    },
+    [selectedSha],
+  );
+  const openDiff = useCallback(
+    (path: string) => {
+      if (selectedSha !== null) {
+        void actions.openDiff(selectedSha, path, effectiveViewMode).catch(() => undefined);
+      }
+    },
+    [selectedSha, effectiveViewMode],
+  );
 
   const header = (
-    <StashHeader target={target} count={entries.length} loading={loading} onReload={actions.reload} />
+    <StashHeader
+      target={target}
+      count={entries.length}
+      loading={loading}
+      hasFiles={files.length > 0}
+      viewMode={effectiveViewMode}
+      onViewModeChange={changeViewMode}
+      onCollapseAll={collapseAll}
+      onExpandAll={expandAll}
+      onReload={actions.reload}
+    />
   );
 
   if (!ready) {
@@ -220,16 +234,6 @@ export function App() {
         />
 
         <section className="gs-stashes__diff">
-          <StashFileBar
-            file={activeFile}
-            viewMode={effectiveViewMode}
-            onViewModeChange={changeViewMode}
-            onCollapseAll={collapseAll}
-            onExpandAll={expandAll}
-            onOpenFile={openFile}
-            onOpenDiff={openDiff}
-          />
-
           {summary === undefined ? (
             <EmptyState title="Считаем содержимое стеша…" />
           ) : summary.summary === null ? (
@@ -258,6 +262,8 @@ export function App() {
               onExpandContext={expandContext}
               onRequestPatch={requestPatch}
               onVisibleFileChange={setActivePath}
+              onOpenFile={openFile}
+              onOpenDiff={openDiff}
             />
           )}
         </section>

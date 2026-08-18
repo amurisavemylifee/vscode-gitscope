@@ -448,7 +448,7 @@ describe('App стешей', () => {
     respondWith(state());
     render(<App />);
 
-    await userEvent.click(await screen.findByTitle('Открыть файл из стеша отдельной вкладкой'));
+    await userEvent.click(await screen.findByTitle('Открыть «src/app.ts» отдельной вкладкой'));
 
     expect(request).toHaveBeenCalledWith('stashes/open', { sha: SHA, path: 'src/app.ts' });
   });
@@ -458,7 +458,7 @@ describe('App стешей', () => {
     render(<App />);
 
     await userEvent.click(await screen.findByTitle('Двумя колонками'));
-    await userEvent.click(await screen.findByTitle('Открыть эти изменения отдельной вкладкой'));
+    await userEvent.click(await screen.findByTitle('Открыть изменения «src/app.ts» отдельной вкладкой'));
 
     expect(request).toHaveBeenCalledWith('stashes/openDiff', {
       sha: SHA,

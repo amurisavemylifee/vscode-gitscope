@@ -1,17 +1,34 @@
+import type { ViewMode } from '@shared/model';
 import type { StashTarget } from '@shared/stashModel';
 import { plural } from '@shared/time';
 import { Icon } from '../../components/Icon';
+import { SegmentedButton } from '../../components/Segmented';
 import './StashHeader.css';
 
 interface StashHeaderProps {
   readonly target: StashTarget | null;
   readonly count: number;
   readonly loading: boolean;
+  readonly hasFiles: boolean;
+  readonly viewMode: ViewMode;
+  readonly onViewModeChange: (mode: ViewMode) => void;
+  readonly onCollapseAll: () => void;
+  readonly onExpandAll: () => void;
   readonly onReload: () => void;
 }
 
-/** Шапка панели: чьи стеши, сколько их и кнопка перечитать список. */
-export function StashHeader({ target, count, loading, onReload }: StashHeaderProps) {
+/** Шапка панели: чьи стеши, сколько их и что можно сделать с показанным диффом. */
+export function StashHeader({
+  target,
+  count,
+  loading,
+  hasFiles,
+  viewMode,
+  onViewModeChange,
+  onCollapseAll,
+  onExpandAll,
+  onReload,
+}: StashHeaderProps) {
   return (
     <header className="gs-stashes-header">
       <Icon name="archive" size={15} className="gs-stashes-header__icon" />
@@ -27,6 +44,41 @@ export function StashHeader({ target, count, loading, onReload }: StashHeaderPro
           {count} {plural(count, ['стеш', 'стеша', 'стешей'])}
         </span>
       ) : null}
+
+      <div className="gs-segmented" role="group" aria-label="Режим отображения">
+        <SegmentedButton
+          active={viewMode === 'unified'}
+          icon="rows"
+          label="Одной колонкой"
+          onClick={() => onViewModeChange('unified')}
+        />
+        <SegmentedButton
+          active={viewMode === 'split'}
+          icon="columns"
+          label="Двумя колонками"
+          onClick={() => onViewModeChange('split')}
+        />
+      </div>
+
+      <button
+        type="button"
+        className="gs-stashes-header__action"
+        title="Свернуть все файлы"
+        disabled={!hasFiles}
+        onClick={onCollapseAll}
+      >
+        <Icon name="fold" size={15} />
+      </button>
+
+      <button
+        type="button"
+        className="gs-stashes-header__action"
+        title="Развернуть все файлы"
+        disabled={!hasFiles}
+        onClick={onExpandAll}
+      >
+        <Icon name="unfold" size={15} />
+      </button>
 
       <button
         type="button"

@@ -34,6 +34,9 @@ interface DiffCanvasProps {
   readonly onExpandContext: (path: string, startLine: number, endLine: number) => void;
   readonly onRequestPatch: (path: string) => void;
   readonly onVisibleFileChange: (path: string) => void;
+  /** Открыть файл или его изменения отдельной вкладкой — не у всех панелей есть куда открывать. */
+  readonly onOpenFile?: (path: string) => void;
+  readonly onOpenDiff?: (path: string) => void;
 }
 
 /** На сколько файлов вперёд запрашивать патчи, чтобы прокрутка не упиралась в загрузку. */
@@ -64,6 +67,8 @@ export function DiffCanvas({
   onExpandContext,
   onRequestPatch,
   onVisibleFileChange,
+  onOpenFile,
+  onOpenDiff,
 }: DiffCanvasProps) {
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
   const columns = useWrapColumns(
@@ -161,6 +166,8 @@ export function DiffCanvas({
                   onExpandContext={onExpandContext}
                   onRequestPatch={onRequestPatch}
                   collapsed={collapsed}
+                  onOpenFile={onOpenFile}
+                  onOpenDiff={onOpenDiff}
                 />
               </div>
             );
@@ -175,6 +182,8 @@ export function DiffCanvas({
             collapsed={collapsed.has(stickyFile.path)}
             onToggle={() => onToggleCollapse(stickyFile.path)}
             floating
+            onOpenFile={onOpenFile ? () => onOpenFile(stickyFile.path) : undefined}
+            onOpenDiff={onOpenDiff ? () => onOpenDiff(stickyFile.path) : undefined}
           />
         </div>
       ) : null}
@@ -191,6 +200,8 @@ function RowContent({
   onExpandLarge,
   onExpandContext,
   onRequestPatch,
+  onOpenFile,
+  onOpenDiff,
 }: {
   readonly row: DiffRow;
   readonly files: readonly FileChange[];
@@ -200,6 +211,8 @@ function RowContent({
   readonly onExpandLarge: (path: string) => void;
   readonly onExpandContext: (path: string, startLine: number, endLine: number) => void;
   readonly onRequestPatch: (path: string) => void;
+  readonly onOpenFile?: (path: string) => void;
+  readonly onOpenDiff?: (path: string) => void;
 }) {
   const file = files[row.fileIndex];
   if (!file) {
@@ -213,7 +226,13 @@ function RowContent({
   switch (row.kind) {
     case 'file':
       return (
-        <FileHeaderRow file={file} collapsed={collapsed.has(file.path)} onToggle={() => onToggleCollapse(file.path)} />
+        <FileHeaderRow
+          file={file}
+          collapsed={collapsed.has(file.path)}
+          onToggle={() => onToggleCollapse(file.path)}
+          onOpenFile={onOpenFile ? () => onOpenFile(file.path) : undefined}
+          onOpenDiff={onOpenDiff ? () => onOpenDiff(file.path) : undefined}
+        />
       );
     case 'notice':
       return (

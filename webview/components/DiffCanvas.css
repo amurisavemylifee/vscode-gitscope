@@ -106,6 +106,25 @@
   font-size: 11px;
 }
 
+.gs-file-header__action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: var(--gs-radius-sm);
+  background: transparent;
+  color: var(--gs-fg-muted);
+  transition: background 80ms ease, color 80ms ease;
+}
+
+.gs-file-header__action:hover {
+  background: var(--gs-bg-hover);
+  color: var(--gs-fg);
+}
+
 /* --- служебные строки --- */
 
 .gs-notice {

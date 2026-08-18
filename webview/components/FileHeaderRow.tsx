@@ -9,10 +9,20 @@ interface FileHeaderRowProps {
   readonly onToggle: () => void;
   /** Шапка отрисована в липкой полосе поверх списка, а не как обычная строка. */
   readonly floating?: boolean;
+  /** Открыть файл или его изменения отдельной вкладкой — не везде есть куда открывать. */
+  readonly onOpenFile?: () => void;
+  readonly onOpenDiff?: () => void;
 }
 
 /** Заголовок файла: тот же компонент используется и в потоке строк, и в липкой полосе. */
-export function FileHeaderRow({ file, collapsed, onToggle, floating = false }: FileHeaderRowProps) {
+export function FileHeaderRow({
+  file,
+  collapsed,
+  onToggle,
+  floating = false,
+  onOpenFile,
+  onOpenDiff,
+}: FileHeaderRowProps) {
   return (
     <div className={`gs-file-header${floating ? ' gs-file-header--floating' : ''}`}>
       <button
@@ -48,6 +58,28 @@ export function FileHeaderRow({ file, collapsed, onToggle, floating = false }: F
       ) : (
         <DiffStat insertions={file.insertions} deletions={file.deletions} withBar />
       )}
+
+      {onOpenFile ? (
+        <button
+          type="button"
+          className="gs-file-header__action"
+          title={`Открыть «${file.path}» отдельной вкладкой`}
+          onClick={onOpenFile}
+        >
+          <Icon name="file" size={13} />
+        </button>
+      ) : null}
+
+      {onOpenDiff ? (
+        <button
+          type="button"
+          className="gs-file-header__action"
+          title={`Открыть изменения «${file.path}» отдельной вкладкой`}
+          onClick={onOpenDiff}
+        >
+          <Icon name="external" size={13} />
+        </button>
+      ) : null}
     </div>
   );
 }
